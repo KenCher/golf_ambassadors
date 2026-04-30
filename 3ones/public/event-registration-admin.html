@@ -499,6 +499,327 @@
             margin-bottom: 12px;
             font-size: 0.93em;
         }
+        
+        /* ========================================
+           MOBILE OPTIMIZATION FOR IPHONE & ANDROID
+           ======================================== */
+        
+        /* Tablets (iPad, Android tablets) */
+        @media (max-width: 1024px) {
+            body {
+                padding: 15px;
+            }
+            
+            .container {
+                max-width: 100%;
+            }
+            
+            header {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .card {
+                padding: 18px;
+            }
+            
+            .create-event-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .compact-form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .holes-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+        }
+        
+        /* Mobile phones (iPhone, Android phones) */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                font-size: 16px; /* Prevent zoom on input focus */
+            }
+            
+            .container {
+                max-width: 100%;
+            }
+            
+            header {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+            
+            h1 {
+                font-size: 1.6em;
+                margin-bottom: 8px;
+            }
+            
+            .subtitle {
+                font-size: 0.9em;
+            }
+            
+            .card {
+                padding: 14px;
+                margin-bottom: 16px;
+                border-radius: 12px;
+            }
+            
+            .card h2 {
+                font-size: 1.3em;
+                margin-bottom: 12px;
+            }
+            
+            /* Make form inputs touch-friendly */
+            input, select, textarea {
+                padding: 14px 12px;
+                font-size: 16px; /* Prevent zoom on iOS */
+                min-height: 48px; /* Touch-friendly size */
+                border-radius: 8px;
+            }
+            
+            /* Make buttons larger and touch-friendly */
+            button {
+                padding: 16px 20px;
+                font-size: 16px;
+                min-height: 48px;
+                border-radius: 10px;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            
+            /* Stack grids vertically on mobile */
+            .create-event-grid,
+            .compact-form-grid,
+            .score-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .member-import-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .matchplay-pairing-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Optimize holes grid for mobile */
+            .holes-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .hole-card {
+                padding: 10px;
+            }
+            
+            .hole-card input,
+            .hole-card select {
+                font-size: 14px;
+                padding: 10px 8px;
+                min-height: 44px;
+            }
+            
+            /* Template actions stack vertically */
+            .template-actions {
+                flex-direction: column;
+            }
+            
+            .template-actions button {
+                width: 100%;
+                padding: 12px;
+                font-size: 14px;
+            }
+            
+            /* Course setup responsive */
+            .course-setup-header,
+            .payment-setup-header,
+            .matchplay-box-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .toggle-course-setup-btn,
+            .toggle-payment-setup-btn {
+                width: 100%;
+                padding: 12px 16px;
+            }
+            
+            /* Matchplay pairing items stack better */
+            .matchplay-pairing-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            /* Link boxes more readable */
+            .link-box {
+                font-size: 12px;
+                padding: 12px;
+                word-break: break-all;
+            }
+            
+            .copy-btn {
+                width: 100%;
+                padding: 14px;
+            }
+            
+            /* Success box optimization */
+            .success-box {
+                padding: 16px;
+                font-size: 14px;
+            }
+            
+            /* Member import optimization */
+            .member-import-box {
+                padding: 14px;
+            }
+            
+            .active-members-list {
+                max-height: 180px;
+            }
+            
+            .active-member-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            
+            /* Score summary responsive */
+            .score-summary-box {
+                padding: 14px;
+            }
+            
+            .score-summary-box h3 {
+                font-size: 1em;
+            }
+            
+            .score-summary-box p {
+                font-size: 0.9em;
+            }
+            
+            /* Leaderboard box */
+            .leaderboard-box {
+                padding: 14px;
+            }
+            
+            .leaderboard-box h3 {
+                font-size: 1.1em;
+            }
+            
+            /* Form groups spacing */
+            .form-group {
+                margin-bottom: 14px;
+            }
+            
+            label {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+        }
+        
+        /* Small phones (iPhone SE, small Android) */
+        @media (max-width: 375px) {
+            h1 {
+                font-size: 1.4em;
+            }
+            
+            .card h2 {
+                font-size: 1.2em;
+            }
+            
+            .holes-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            button {
+                padding: 14px 16px;
+                font-size: 15px;
+            }
+        }
+        
+        /* Landscape mode optimization */
+        @media (max-width: 896px) and (orientation: landscape) {
+            body {
+                padding: 8px;
+            }
+            
+            header {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            h1 {
+                font-size: 1.4em;
+            }
+            
+            .card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .holes-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (hover: none) and (pointer: coarse) {
+            /* Increase tap targets */
+            button, input, select, textarea {
+                min-height: 48px;
+            }
+            
+            /* Remove hover effects on touch devices */
+            button:hover {
+                transform: none;
+            }
+            
+            /* Better active states for touch */
+            button:active {
+                transform: scale(0.98);
+                opacity: 0.9;
+            }
+            
+            input:active, select:active, textarea:active {
+                border-color: #10b981;
+            }
+        }
+        
+        /* iOS specific fixes */
+        @supports (-webkit-touch-callout: none) {
+            /* Fix iOS input zoom */
+            input, select, textarea {
+                font-size: 16px !important;
+            }
+            
+            /* Fix iOS button appearance */
+            button {
+                -webkit-appearance: none;
+                appearance: none;
+            }
+            
+            /* Fix iOS safe area */
+            body {
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        
+        /* Android specific fixes */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) and (min-resolution: .001dpcm) {
+            /* Fix Android input appearance */
+            input, select, textarea {
+                -webkit-appearance: none;
+                appearance: none;
+            }
+        }
 
         .leaderboard-mini-table {
             width: 100%;
