@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#059669">
+    <title>Live Score Entry - Golf Ambassadors</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+        
+        .hole-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .hole-input {
+            text-align: center;
+        }
+        
+        .hole-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        
+        .hole-input input {
+            text-align: center;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            margin-top: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-synced {
+            background: #d1fae5;
+            color: #059669;
+        }
+        
+        .status-syncing {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .status-offline {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .player-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 15px;
+        }
+        
+        .player-item {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .player-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .player-score {
+            font-size: 18px;
+            font-weight: 700;
+            color: #059669;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #059669;
+        }
+        
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid #d97706;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #059669;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .total-score {
+            font-size: 24px;
+            font-weight: 800;
+            color: #059669;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            header { padding: 20px; }
+            h1 { font-size: 24px; }
+            .card { padding: 20px; }
+            .hole-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⛳ Live Score Entry</h1>
+            <p class="subtitle">Enter your scores in real-time</p>
+            <span id="syncStatus" class="status-badge status-offline">Offline</span>
+        </header>
+
+        <div id="setupSection" class="card">
+            <h2 class="section-title">🎯 Get Started</h2>
+            
+            <div class="form-group">
+                <label for="eventSelect">Select Event</label>
+                <select id="eventSelect">
+                    <option value="">Loading events...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="playerName">Your Name</label>
+                <input type="text" id="playerName" placeholder="Enter your name">
+            </div>
+            
+            <button class="btn btn-primary" onclick="startScoring()">Start Entering Scores</button>
+        </div>
+
+        <div id="scoringSection" style="display: none;">
+            <div class="card">
+                <h2 class="section-title">
+                    📝 Score Entry
+                    <span id="playerNameDisplay" style="margin-left: auto; color: #059669;"></span>
+                </h2>
+                
+                <div class="alert alert-info">
+                    💡 Enter your score for each hole. Your scores will sync automatically with all devices.
+                </div>
+                
+                <div id="holesContainer"></div>
+                
+                <div class="total-score" id="totalScore">
+                    Total: 0
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveScores()">💾 Save Scores</button>
+                <button class="btn btn-secondary" onclick="backToSetup()">← Back to Setup</button>
+            </div>
+            
+            <div class="card">
+                <h2 class="section-title">🏆 Live Leaderboard</h2>
+                <div id="leaderboard" class="player-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading scores...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
+    
+    <script>
+        let currentEvent = null;
+        let currentPlayer = null;
+        let scores = {};
+        let leaderboardRef = null;
+
+        // Check Firebase connection
+        function checkFirebaseConnection() {
+            const connectedRef = firebase.database().ref('.info/connected');
+            connectedRef.on('value', (snap) => {
+                const status = document.getElementById('syncStatus');
+                if (snap.val() === true) {
+                    status.textContent = '✓ Connected';
+                    status.className = 'status-badge status-synced';
+                } else {
+                    status.textContent = '✗ Offline';
+                    status.className = 'status-badge status-offline';
+                }
+            });
+        }
+
+        // Load events from Firebase
+        function loadEvents() {
+            const eventsRef = firebase.database().ref('events');
+            eventsRef.on('value', (snapshot) => {
+                const events = snapshot.val();
+                const select = document.getElementById('eventSelect');
+                select.innerHTML = '<option value="">-- Select an Event --</option>';
+                
+                if (events) {
+                    Object.keys(events).forEach(eventId => {
+                        const event = events[eventId];
+                        const option = document.createElement('option');
+                        option.value = eventId;
+                        option.textContent = `${event.name} - ${event.course}`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No events available</option>';
+                }
+            });
+        }
+
+        // Start scoring
+        function startScoring() {
+            const eventId = document.getElementById('eventSelect').value;
+            const playerName = document.getElementById('playerName').value.trim();
+            
+            if (!eventId) {
+                alert('Please select an event');
+                return;
+            }
+            
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            currentEvent = eventId;
+            currentPlayer = playerName;
+            
+            // Load event details
+            firebase.database().ref(`events/${eventId}`).once('value', (snapshot) => {
+                const event = snapshot.val();
+                if (event) {
+                    document.getElementById('setupSection').style.display = 'none';
+                    document.getElementById('scoringSection').style.display = 'block';
+                    document.getElementById('playerNameDisplay').textContent = playerName;
+                    
+                    createHoleInputs(event.holes || 18);
+                    loadPlayerScores();
+                    setupLeaderboard();
+                }
+            });
+        }
+
+        // Create hole inputs
+        function createHoleInputs(numHoles) {
+            const container = document.getElementById('holesContainer');
+            container.innerHTML = '<div class="hole-grid"></div>';
+            const grid = container.querySelector('.hole-grid');
+            
+            for (let i = 1; i <= numHoles; i++) {
+                const holeDiv = document.createElement('div');
+                holeDiv.className = 'hole-input';
+                holeDiv.innerHTML = `
+                    <div class="hole-label">Hole ${i}</div>
+                    <input type="number" id="hole${i}" min="1" max="15" 
+                           onchange="updateTotal()" placeholder="-">
+                `;
+                grid.appendChild(holeDiv);
+            }
+        }
+
+        // Load player's existing scores
+        function loadPlayerScores() {
+            const scoresRef = firebase.database().ref(`events/${currentEvent}/scores/${sanitizeKey(currentPlayer)}`);
+            scoresRef.on('value', (snapshot) => {
+                const playerScores = snapshot.val();
+                if (playerScores && playerScores.holes) {
+                    Object.keys(playerScores.holes).forEach(hole => {
+                        const input = document.getElementById(`hole${hole}`);
+                        if (input) {
+                            input.value = playerScores.holes[hole];
+                        }
+                    });
+                    updateTotal();
+                }
+            });
+        }
+
+        // Update total score
+        function updateTotal() {
+            let total = 0;
+            const inputs = document.querySelectorAll('.hole-input input');
+            inputs.forEach(input => {
+                const value = parseInt(input.value);
+                if (!isNaN(value)) {
+                    total += value;
+                }
+            });
+            document.getElementById('totalScore').textContent = `Total: ${total}`;
+        }
+
+        // Save scores to Firebase
+        function saveScores() {
+            const status = document.getElementById('syncStatus');
+            status.textContent = '⟳ Syncing...';
+            status.className = 'status-badge status-syncing';
+            
+            const holes = {};
+            const inputs = document.querySelectorAll('.hole-input input');
+            let total = 0;
+            
+            inputs.forEach((input, index) => {
+                const value = parseInt(input.value);
+                if (!isNaN(value)) {
+                    holes[index + 1] = value;
+                    total += value;
+                }
+            });
+            
+            const scoreData = {
+                playerName: currentPlayer,
+                holes: holes,
+                total: total,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            firebase.database().ref(`events/${currentEvent}/scores/${sanitizeKey(currentPlayer)}`)
+                .set(scoreData)
+                .then(() => {
+                    status.textContent = '✓ Saved';
+                    status.className = 'status-badge status-synced';
+                    
+                    // Show success message
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = '✓ Scores saved successfully!';
+                    document.querySelector('#scoringSection .card').insertBefore(
+                        alert, 
+                        document.getElementById('holesContainer')
+                    );
+                    setTimeout(() => alert.remove(), 3000);
+                })
+                .catch((error) => {
+                    alert('Error saving scores: ' + error.message);
+                    status.textContent = '✗ Error';
+                    status.className = 'status-badge status-offline';
+                });
+        }
+
+        // Setup live leaderboard
+        function setupLeaderboard() {
+            if (leaderboardRef) {
+                leaderboardRef.off();
+            }
+            
+            leaderboardRef = firebase.database().ref(`events/${currentEvent}/scores`);
+            leaderboardRef.on('value', (snapshot) => {
+                const scores = snapshot.val();
+                const leaderboard = document.getElementById('leaderboard');
+                
+                if (!scores) {
+                    leaderboard.innerHTML = '<p style="text-align: center; color: #64748b;">No scores yet. Be the first to enter!</p>';
+                    return;
+                }
+                
+                // Convert to array and sort
+                const players = Object.values(scores).sort((a, b) => a.total - b.total);
+                
+                leaderboard.innerHTML = players.map((player, index) => `
+                    <div class="player-item">
+                        <div>
+                            <span style="color: #64748b; margin-right: 8px;">#${index + 1}</span>
+                            <span class="player-name">${player.playerName}</span>
+                        </div>
+                        <span class="player-score">${player.total || 0}</span>
+                    </div>
+                `).join('');
+            });
+        }
+
+        // Back to setup
+        function backToSetup() {
+            if (leaderboardRef) {
+                leaderboardRef.off();
+            }
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('scoringSection').style.display = 'none';
+            currentEvent = null;
+            currentPlayer = null;
+        }
+
+        // Sanitize Firebase key
+        function sanitizeKey(key) {
+            return key.replace(/[.#$[\]]/g, '_');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            checkFirebaseConnection();
+            loadEvents();
+        });
+    </script>
+</body>
+</html>
