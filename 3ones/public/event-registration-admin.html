@@ -1561,7 +1561,7 @@
                             </select>
                             <input type="text" id="course-name" placeholder="e.g., Deerfield Golf Course" style="margin-top:10px; display:none;">
                             <div style="margin-top:8px; color:#64748b; font-size:0.88em;" id="course-name-help">
-                                Select a loaded course from the dropdown, or choose manual entry to create a new one.
+                                Select an existing course or choose "➕ Create New Course" to add a new one.
                             </div>
                         </div>
 
@@ -2531,15 +2531,16 @@
                     .filter(Boolean)
             )];
 
-            selector.innerHTML = '<option value="">-- Select existing course or choose manual entry --</option>';
+            selector.innerHTML = '<option value="">-- Select a course or create new --</option>';
 
             uniqueNames.forEach(name => {
                 const selected = name === selectedName ? 'selected' : '';
                 selector.innerHTML += `<option value="${name}" ${selected}>${name}</option>`;
             });
 
+            // Always show the manual entry option
             const useManual = selectedName && !uniqueNames.includes(selectedName);
-            selector.innerHTML += `<option value="__manual__" ${useManual ? 'selected' : ''}>+ Enter a new course name</option>`;
+            selector.innerHTML += `<option value="__manual__" ${useManual ? 'selected' : ''}>➕ Create New Course</option>`;
         }
 
         function handleCourseNameSelection() {
