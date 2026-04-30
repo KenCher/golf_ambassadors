@@ -681,14 +681,63 @@
                 padding: 14px;
             }
             
+            .member-import-box h3 {
+                font-size: 1.1em;
+            }
+            
+            .member-import-box p {
+                font-size: 0.9em;
+            }
+            
+            .member-import-header {
+                flex-direction: column !important;
+                align-items: stretch !important;
+            }
+            
+            .member-import-header > div {
+                flex-direction: column !important;
+            }
+            
+            .member-import-header button {
+                width: 100%;
+                margin-top: 10px !important;
+            }
+            
+            .member-import-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+            }
+            
+            .member-import-grid button {
+                width: 100%;
+            }
+            
             .active-members-list {
-                max-height: 180px;
+                max-height: 200px;
+                font-size: 0.9em;
             }
             
             .active-member-item {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 6px;
+                padding: 12px;
+            }
+            
+            /* Bulk add actions mobile */
+            #bulk-add-actions {
+                padding: 12px !important;
+            }
+            
+            #bulk-add-actions > div {
+                flex-direction: column !important;
+            }
+            
+            #bulk-add-actions button {
+                width: 100% !important;
+                min-width: auto !important;
+                flex: none !important;
+                margin-bottom: 8px;
             }
             
             /* Score summary responsive */
