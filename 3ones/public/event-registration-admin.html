@@ -1749,6 +1749,15 @@
                     </div>
                 </div>
 
+                <!-- Saved Event Links Section -->
+                <div id="saved-event-links-section" class="card" style="margin-top: 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #86efac;">
+                    <h3 style="color: #065f46; margin-bottom: 15px;">🔗 Saved Event Links</h3>
+                    <p style="color: #047857; margin-bottom: 15px; font-size: 0.95em;">All your event registration and admin links are saved here for easy sharing.</p>
+                    <div id="saved-links-container">
+                        <p style="color: #64748b; font-style: italic;">No events created yet. Create an event to see links here.</p>
+                    </div>
+                </div>
+
                 <!-- Collapsible Active Members Import -->
                 <div class="member-import-box" style="margin-top: 20px;">
                     <div class="member-import-header" style="cursor: pointer;" onclick="toggleActiveMembersSection()">
@@ -4479,6 +4488,7 @@
 
             renderSavedCourseOptions();
             renderActiveMembers();
+            renderSavedEventLinks(events);
             
             selector.innerHTML = '<option value="">-- Select Event --</option>';
             scoreSelector.innerHTML = '<option value="">-- Select Event --</option>';
@@ -4488,6 +4498,116 @@
                 selector.innerHTML += option;
                 scoreSelector.innerHTML += option;
             });
+        }
+
+        function renderSavedEventLinks(events) {
+            const container = document.getElementById('saved-links-container');
+            if (!container) return;
+
+            if (!events || events.length === 0) {
+                container.innerHTML = '<p style="color: #64748b; font-style: italic;">No events created yet. Create an event to see links here.</p>';
+                return;
+            }
+
+            const baseUrl = window.location.origin + window.location.pathname.replace('event-registration-admin.html', '');
+            
+            let html = '<div style="display: grid; gap: 20px;">';
+            
+            events.forEach(event => {
+                const registrationLink = `${baseUrl}event-registration.html?event=${event.id}`;
+                const adminLink = `${baseUrl}golf-ambassadors.html?event=${event.id}`;
+                const resultsLink = `${baseUrl}golf-ambassadors-results.html?event=${event.id}`;
+                
+                html += `
+                    <div style="padding: 18px; background: white; border-radius: 12px; border: 1px solid #d1fae5; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <h4 style="color: #065f46; margin-bottom: 12px; font-size: 1.1em;">
+                            🏌️ ${event.name}
+                            <span style="color: #64748b; font-size: 0.85em; font-weight: normal; margin-left: 8px;">${event.date}</span>
+                        </h4>
+                        
+                        <div style="display: grid; gap: 12px;">
+                            <!-- Registration Link -->
+                            <div>
+                                <p style="color: #047857; font-weight: 600; font-size: 0.9em; margin-bottom: 6px;">📝 Player Registration:</p>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" value="${registrationLink}" readonly
+                                           style="flex: 1; padding: 8px; font-size: 0.85em; border: 1px solid #d1fae5; border-radius: 6px; background: #f0fdf4; font-family: monospace;">
+                                    <button onclick="copyToClipboard('${registrationLink}', 'Registration link')"
+                                            style="padding: 8px 14px; font-size: 0.85em; white-space: nowrap; min-height: auto; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                        📋 Copy
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Admin Link -->
+                            <div>
+                                <p style="color: #047857; font-weight: 600; font-size: 0.9em; margin-bottom: 6px;">🔧 Admin Score Entry:</p>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" value="${adminLink}" readonly
+                                           style="flex: 1; padding: 8px; font-size: 0.85em; border: 1px solid #d1fae5; border-radius: 6px; background: #f0fdf4; font-family: monospace;">
+                                    <button onclick="copyToClipboard('${adminLink}', 'Admin link')"
+                                            style="padding: 8px 14px; font-size: 0.85em; white-space: nowrap; min-height: auto; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                                        📋 Copy
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Results Link -->
+                            <div>
+                                <p style="color: #047857; font-weight: 600; font-size: 0.9em; margin-bottom: 6px;">🏆 Live Results:</p>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" value="${resultsLink}" readonly
+                                           style="flex: 1; padding: 8px; font-size: 0.85em; border: 1px solid #d1fae5; border-radius: 6px; background: #f0fdf4; font-family: monospace;">
+                                    <button onclick="copyToClipboard('${resultsLink}', 'Results link')"
+                                            style="padding: 8px 14px; font-size: 0.85em; white-space: nowrap; min-height: auto; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                        📋 Copy
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- WhatsApp Share Button -->
+                            <div style="margin-top: 8px;">
+                                <button onclick="shareViaWhatsApp('${event.name}', '${registrationLink}', '${adminLink}', '${resultsLink}')"
+                                        style="width: 100%; padding: 10px; font-size: 0.9em; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                                    💬 Share All Links via WhatsApp
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function copyToClipboard(text, label) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`${label} copied to clipboard!`);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy link. Please copy manually.');
+            });
+        }
+
+        function shareViaWhatsApp(eventName, registrationLink, adminLink, resultsLink) {
+            const message = `🏌️ ${eventName} - Golf Tournament
+
+📝 REGISTER HERE:
+${registrationLink}
+
+📊 ENTER YOUR SCORES:
+${adminLink}
+
+🏆 VIEW LIVE LEADERBOARD:
+${resultsLink}
+
+✨ Mobile-optimized • Add to home screen for app experience
+
+⛳ See you on the course!`;
+
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
         }
         
         function loadRegistrations() {
