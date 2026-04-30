@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>GPS Test - Golf4us</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .status-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #4ade80;
+        }
+        .error {
+            color: #ef4444;
+        }
+        .success {
+            color: #4ade80;
+        }
+        button {
+            background: #4ade80;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .course-list {
+            margin-top: 20px;
+        }
+        .course-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .course-name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .course-distance {
+            color: #4ade80;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 GPS Test Tool</h1>
+        
+        <div class="status">
+            <div class="status-title">Browser Support</div>
+            <div id="browserSupport">Checking...</div>
+        </div>
+
+        <div class="status">
+            <div class="status-title">GPS Status</div>
+            <div id="gpsStatus">Not started</div>
+        </div>
+
+        <div class="status">
+            <div class="status-title">Your Location</div>
+            <div id="location">Unknown</div>
+        </div>
+
+        <div class="status">
+            <div class="status-title">Accuracy</div>
+            <div id="accuracy">Unknown</div>
+        </div>
+
+        <button onclick="testGPS()">🎯 Test GPS Now</button>
+        <button onclick="findCourses()">🏌️ Find Nearby Courses</button>
+
+        <div class="course-list" id="courseList"></div>
+    </div>
+
+    <script>
+        // Check browser support
+        if (navigator.geolocation) {
+            document.getElementById('browserSupport').innerHTML = '<span class="success">✓ Geolocation supported</span>';
+        } else {
+            document.getElementById('browserSupport').innerHTML = '<span class="error">✗ Geolocation NOT supported</span>';
+        }
+
+        let currentPosition = null;
+
+        function testGPS() {
+            document.getElementById('gpsStatus').textContent = 'Requesting location...';
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    currentPosition = position.coords;
+                    document.getElementById('gpsStatus').innerHTML = '<span class="success">✓ GPS Working!</span>';
+                    document.getElementById('location').innerHTML = `
+                        Latitude: ${position.coords.latitude.toFixed(6)}<br>
+                        Longitude: ${position.coords.longitude.toFixed(6)}
+                    `;
+                    document.getElementById('accuracy').innerHTML = `±${Math.round(position.coords.accuracy)} meters`;
+                    
+                    console.log('GPS Success:', position.coords);
+                },
+                (error) => {
+                    let errorMsg = '';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg = 'Permission denied - Enable location in settings';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg = 'Position unavailable - Check GPS is enabled';
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg = 'Request timeout - Try again';
+                            break;
+                        default:
+                            errorMsg = 'Unknown error';
+                    }
+                    document.getElementById('gpsStatus').innerHTML = `<span class="error">✗ ${errorMsg}</span>`;
+                    console.error('GPS Error:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function findCourses() {
+            if (!currentPosition) {
+                alert('Please test GPS first!');
+                return;
+            }
+
+            const courses = [
+                { name: 'Deerfield Golf Course', lat: 43.1009, lon: -77.6109, city: 'Rochester' },
+                { name: 'Cragie Brae Golf Club', lat: 43.0847, lon: -77.5328, city: 'Scottsville' },
+                { name: 'Mill Creek Golf Club', lat: 43.1542, lon: -77.5892, city: 'Rochester' },
+                { name: 'Greystone Golf Club', lat: 43.0456, lon: -77.5789, city: 'Walworth' },
+                { name: 'Oak Hill Country Club', lat: 43.1286, lon: -77.5647, city: 'Rochester' },
+                { name: 'Shadow Lake Golf Club', lat: 43.0731, lon: -77.4231, city: 'Penfield' }
+            ];
+
+            const coursesWithDistance = courses.map(course => {
+                const distance = calculateDistance(
+                    currentPosition.latitude,
+                    currentPosition.longitude,
+                    course.lat,
+                    course.lon
+                );
+                return { ...course, distance };
+            }).sort((a, b) => a.distance - b.distance);
+
+            const html = coursesWithDistance.map((course, index) => `
+                <div class="course-item">
+                    <div class="course-name">
+                        ${index === 0 ? '⭐ ' : ''}${course.name}
+                    </div>
+                    <div>${course.city}, NY</div>
+                    <div class="course-distance">📍 ${course.distance.toFixed(1)} miles away</div>
+                </div>
+            `).join('');
+
+            document.getElementById('courseList').innerHTML = html;
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            const meters = R * c;
+            return meters / 1609.34; // Convert to miles
+        }
+
+        // Auto-test on load
+        setTimeout(() => {
+            testGPS();
+        }, 1000);
+    </script>
+</body>
+</html>

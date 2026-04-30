@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    
+    <!-- iOS Specific Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Golf Results">
+    
+    <!-- Android Specific Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f766e">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Prevent text size adjustment on orientation change -->
+    <meta name="format-detection" content="telephone=no">
+    
+    <title>Golf Ambassadors - Public Results</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: #1e293b;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            background: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 60%, rgba(239,246,255,0.94) 100%);
+            padding: clamp(20px, 3vw, 36px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(15,23,42,0.24);
+            margin-bottom: 24px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.35);
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            background: linear-gradient(135deg, #0f766e 0%, #10b981 52%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: clamp(2rem, 4vw, 3em);
+            margin-bottom: 10px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .subtitle {
+            color: #475569;
+            font-size: clamp(0.95rem, 2vw, 1.08em);
+            font-weight: 500;
+        }
+        
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            border-left: 5px solid #3b82f6;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        .form-section {
+            background: linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 55%, rgba(240,253,244,0.94) 100%);
+            padding: clamp(18px, 2.8vw, 28px);
+            border-radius: 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 12px 32px rgba(15,23,42,0.14);
+            border: 1px solid rgba(203,213,225,0.7);
+        }
+        
+        .form-section h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #0f766e 0%, #10b981 52%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .form-section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        
+        .summary-table {
+            width: 100%;
+            min-width: 560px;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .summary-table th {
+            background: linear-gradient(135deg, #0f766e 0%, #10b981 52%, #3b82f6 100%);
+            color: white;
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            font-size: 0.95em;
+        }
+        
+        .summary-table tbody tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+        
+        .summary-table tbody tr:hover td {
+            background: #f0fdf4;
+            transition: background 0.2s ease;
+        }
+        
+        .summary-table tfoot td {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            font-weight: 700;
+            border-top: 3px solid #10b981;
+            padding: 16px;
+            font-size: 1.05em;
+        }
+        
+        .stableford-points {
+            font-weight: 700;
+            color: #059669;
+            font-size: 1.1em;
+        }
+
+        .matchplay-section {
+            background: linear-gradient(145deg, rgba(255,247,237,0.98) 0%, rgba(255,255,255,0.96) 55%, rgba(239,246,255,0.94) 100%);
+        }
+        
+        .refresh-button {
+            background: linear-gradient(135deg, #0f766e 0%, #10b981 52%, #3b82f6 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            margin: 10px 5px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .refresh-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+            background: linear-gradient(135deg, #115e59 0%, #0f766e 52%, #2563eb 100%);
+        }
+        
+        .refresh-button:active {
+            transform: translateY(-1px);
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9em;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+        
+        #competition-info {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 45%, #dbeafe 100%);
+            padding: 14px 18px;
+            border-radius: 12px;
+            border-left: 4px solid #0f766e;
+            font-weight: 500;
+        }
+        
+        @media print {
+            .refresh-button { display: none; }
+            body { background: white; }
+            .form-section { box-shadow: none; }
+        }
+        
+        /* Enhanced Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            body { padding: 12px; }
+            .container { max-width: 100%; }
+            .summary-table { min-width: 500px; }
+            .summary-table th, .summary-table td { padding: 10px 8px; font-size: 0.84em; }
+            .refresh-button {
+                padding: 12px 16px;
+                font-size: 0.95em;
+                min-height: 48px; /* Touch-friendly */
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.85em; }
+            header { padding: 18px 14px; }
+            .form-section { padding: 16px; border-radius: 16px; }
+            .form-section h2 { font-size: 1.45em; }
+            .form-section h3 { font-size: 1.3em; }
+            .summary-table {
+                min-width: 440px;
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .summary-table th, .summary-table td { padding: 10px 8px; font-size: 0.8em; }
+            .refresh-button {
+                width: 100%;
+                margin: 8px 0;
+                min-height: 48px;
+                font-size: 1em;
+                touch-action: manipulation;
+            }
+            #competition-info {
+                font-size: 0.9em;
+                line-height: 1.6;
+                padding: 12px 16px;
+            }
+            
+            /* Better touch targets */
+            button {
+                min-height: 48px;
+                padding: 14px 20px;
+                touch-action: manipulation;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            h1 { font-size: 1.6em; }
+            .subtitle { font-size: 0.88rem; }
+            .alert {
+                padding: 14px;
+                font-size: 0.9em;
+                line-height: 1.5;
+            }
+            .form-section { padding: 12px; }
+            .form-section h2 { font-size: 1.25em; }
+            .form-section h3 { font-size: 1.15em; }
+            .summary-table { min-width: 380px; }
+            .summary-table th, .summary-table td { padding: 8px 6px; font-size: 0.75em; }
+            .stableford-points { font-size: 1em; }
+            .last-updated { font-size: 0.85em; }
+            .refresh-button {
+                padding: 12px 16px;
+                font-size: 0.95em;
+            }
+        }
+        
+        /* iOS Safe Area Support */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+        }
+        
+        /* Prevent text selection on buttons for better mobile UX */
+        button, .refresh-button {
+            -webkit-tap-highlight-color: rgba(16, 185, 129, 0.2);
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+        
+        /* Smooth scrolling for mobile */
+        * {
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Landscape orientation optimization */
+        @media (max-width: 768px) and (orientation: landscape) {
+            header { padding: 12px; }
+            h1 { font-size: 1.5em; }
+            .subtitle { font-size: 0.85em; }
+            .form-section { padding: 12px; margin-bottom: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Golf Ambassadors Results</h1>
+            <p class="subtitle">Live Competition Leaderboards</p>
+            <div style="margin-top: 15px;">
+                <button class="refresh-button" onclick="loadResults()">🔄 Refresh Results</button>
+                <button class="refresh-button" onclick="window.print()">🖨️ Print</button>
+            </div>
+            <div class="last-updated" id="last-updated"></div>
+        </header>
+
+        <div class="alert">
+            <strong>Public View:</strong> These are live results from the current competition. Results update automatically when players submit their scores.
+        </div>
+
+        <!-- Competition Info -->
+        <div class="form-section">
+            <h2 id="competition-name">Competition Results</h2>
+            <div id="competition-info" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Hole by Hole Scorecard -->
+        <div class="form-section" id="scorecard-section">
+            <h3>📋 Hole-by-Hole Scorecard</h3>
+            <div style="overflow-x: auto;">
+                <table class="summary-table" id="scorecard-table">
+                    <thead>
+                        <tr id="scorecard-header"></tr>
+                    </thead>
+                    <tbody id="scorecard-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-section matchplay-section" id="matchplay-section" style="display:none;">
+            <h3>🤝 Match Play Board</h3>
+            <p style="margin-bottom: 14px; color:#64748b;">Professional head-to-head match status for each pairing.</p>
+            <div style="overflow-x:auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Match</th>
+                            <th>Mode</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matchplay-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Overall Leaderboard -->
+        <div class="form-section" id="overall-section">
+            <h3>🏆 Overall Leaderboard</h3>
+            <div style="overflow-x: auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player (HCP)</th>
+                            <th>Total Points</th>
+                            <th>2-Club 🏆</th>
+                            <th>Gross</th>
+                            <th>Net</th>
+                            <th>Winnings</th>
+                        </tr>
+                    </thead>
+                    <tbody id="overall-body"></tbody>
+                    <tfoot id="overall-footer"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Front 9 Leaderboard -->
+        <div class="form-section" id="front9-section">
+            <h3>🥇 Front 9 Leaderboard</h3>
+            <div style="overflow-x: auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player (HCP)</th>
+                            <th>Front 9 Points</th>
+                            <th>Winnings</th>
+                        </tr>
+                    </thead>
+                    <tbody id="front9-body"></tbody>
+                    <tfoot id="front9-footer"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Back 9 Leaderboard -->
+        <div class="form-section" id="back9-section">
+            <h3>🥈 Back 9 Leaderboard</h3>
+            <div style="overflow-x: auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player (HCP)</th>
+                            <th>Back 9 Points</th>
+                            <th>Winnings</th>
+                        </tr>
+                    </thead>
+                    <tbody id="back9-body"></tbody>
+                    <tfoot id="back9-footer"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2-Club Winners Section -->
+        <div class="form-section" id="two-club-section" style="display: none;">
+            <h3>🏆 2-Club Contest Winners</h3>
+            <p style="margin-bottom: 15px; color: #64748b;">Birdie on Par 3 using only 2 clubs</p>
+            <div style="overflow-x: auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Handicap</th>
+                            <th>Holes Won</th>
+                            <th>Total Wins</th>
+                            <th>Prize Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="two-club-body"></tbody>
+                    <tfoot id="two-club-footer"></tfoot>
+                </table>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 10px; border-left: 4px solid #f59e0b;">
+                <p style="color: #78350f; font-weight: 600;">💡 2-Club Contest Rules:</p>
+                <p style="color: #92400e; margin-top: 8px;">Make a birdie (score of 2) on any Par 3 hole using only 2 clubs to win. Each birdie earns a share of the 2-club prize pool!</p>
+            </div>
+        </div>
+
+        <!-- Prize Distribution (if available) -->
+        <div class="form-section" id="prize-section" style="display: none;">
+            <h3>💰 Prize Distribution</h3>
+            <div id="prize-info"></div>
+        </div>
+
+        <div class="form-section" id="payout-summary-section" style="display: none;">
+            <h3>🧾 Winners & Amounts to Be Paid</h3>
+            <p style="margin-bottom: 15px; color: #64748b;">Separate payout summary for overall, front 9, back 9, and 2-club winners.</p>
+            <div style="overflow-x: auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Rank</th>
+                            <th>Winner</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payout-summary-body"></tbody>
+                    <tfoot id="payout-summary-footer"></tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Player Summary -->
+        <div class="form-section">
+            <h3>📊 Player Summary</h3>
+            <div style="overflow-x: auto;">
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Handicap</th>
+                            <th>2-Club Achievements</th>
+                            <th>Holes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="player-summary-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load results from localStorage
+        function getCurrentEventResultsData() {
+            const params = new URLSearchParams(window.location.search);
+            const eventId = params.get('event');
+            const events = JSON.parse(localStorage.getItem('golfEvents') || '[]').filter(event =>
+                event &&
+                event.id &&
+                event.name &&
+                event.date &&
+                event.course &&
+                event.name !== 'Sample Golf Event'
+            );
+
+            let selectedEvent = null;
+
+            if (eventId) {
+                selectedEvent = events.find(event => event.id === eventId) || null;
+            }
+
+            if (!selectedEvent && events.length) {
+                selectedEvent = [...events].sort((a, b) => new Date(b.created || b.date || 0) - new Date(a.created || a.date || 0))[0];
+            }
+
+            if (!selectedEvent) {
+                return null;
+            }
+
+            const courseHoles = Array.isArray(selectedEvent.courseHoles) && selectedEvent.courseHoles.length
+                ? selectedEvent.courseHoles.map((hole, index) => ({
+                    number: index + 1,
+                    par: parseInt(hole.par, 10) || 4,
+                    handicap: parseInt(hole.handicap, 10) || (index + 1)
+                }))
+                : [];
+
+            const players = (selectedEvent.registrations || []).map((registration, index) => ({
+                id: `event-player-${index + 1}`,
+                name: registration.name,
+                handicap: Number(registration.handicap || 0),
+                participating: true
+            }));
+
+            const scores = {};
+            const twoClubAchievements = {};
+
+            (selectedEvent.scores || []).forEach(scoreEntry => {
+                const player = players.find(item => item.name === scoreEntry.playerName);
+                if (!player) return;
+
+                const playerScores = new Array(courseHoles.length).fill(undefined);
+                const playerTwoClub = new Array(courseHoles.length).fill(false);
+                const holeScores = scoreEntry.holeScores || {};
+
+                courseHoles.forEach((hole, index) => {
+                    const gross = parseInt(holeScores[hole.number], 10);
+                    if (gross) {
+                        playerScores[index] = gross;
+                    }
+
+                    if (scoreEntry.won111 && hole.par === 3 && gross === 2) {
+                        playerTwoClub[index] = true;
+                    }
+                });
+
+                scores[player.id] = playerScores;
+                twoClubAchievements[player.id] = playerTwoClub;
+            });
+
+            return {
+                competitionName: selectedEvent.name || 'Golf Ambassadors Competition',
+                course: {
+                    name: selectedEvent.course || '',
+                    holes: courseHoles
+                },
+                players,
+                scores,
+                twoClubAchievements,
+                entryFee: Number(selectedEvent.entryFee || 0),
+                selectedEvent
+            };
+        }
+
+        function getCompetitionFormat(event) {
+            return event?.competitionFormat === 'matchplay' ? 'matchplay' : 'stableford';
+        }
+
+        function getScoringMode(event) {
+            return event?.scoringMode === 'gross' ? 'gross' : 'net';
+        }
+
+        function getMatchPlayStrokeMap(playerA, playerB, courseHoles, scoringMode) {
+            const strokesA = {};
+            const strokesB = {};
+            if (scoringMode === 'gross') {
+                courseHoles.forEach(hole => {
+                    strokesA[hole.number] = 0;
+                    strokesB[hole.number] = 0;
+                });
+                return { strokesA, strokesB };
+            }
+
+            const handicapA = Math.max(0, Math.round(Number(playerA?.handicap || 0)));
+            const handicapB = Math.max(0, Math.round(Number(playerB?.handicap || 0)));
+            const diff = Math.abs(handicapA - handicapB);
+            const favoredPlayer = handicapA <= handicapB ? 'a' : 'b';
+            const totalHoles = courseHoles.length || 18;
+            const baseStrokes = Math.floor(diff / totalHoles);
+            const extraStrokes = diff % totalHoles;
+
+            courseHoles.forEach(hole => {
+                const strokeIndex = parseInt(hole.handicap, 10) || hole.number;
+                const awarded = baseStrokes + (strokeIndex <= extraStrokes ? 1 : 0);
+                strokesA[hole.number] = favoredPlayer === 'a' ? 0 : awarded;
+                strokesB[hole.number] = favoredPlayer === 'b' ? 0 : awarded;
+            });
+
+            return { strokesA, strokesB };
+        }
+
+        function calculateMatchPlayData(event) {
+            if (!event) return [];
+            const pairings = Array.isArray(event.matchPlayPairings) ? event.matchPlayPairings : [];
+            const courseHoles = Array.isArray(event.courseHoles) && event.courseHoles.length
+                ? event.courseHoles.map((hole, index) => ({
+                    number: index + 1,
+                    par: parseInt(hole.par, 10) || 4,
+                    handicap: parseInt(hole.handicap, 10) || (index + 1)
+                }))
+                : [];
+            const registrations = event.registrations || [];
+            const scores = event.scores || [];
+            const scoringMode = getScoringMode(event);
+
+            return pairings.map((pairing, index) => {
+                const playerA = registrations.find(player => player.name === pairing.playerA);
+                const playerB = registrations.find(player => player.name === pairing.playerB);
+                if (!playerA || !playerB) return null;
+
+                const scoreA = scores.find(item => item.playerName === playerA.name);
+                const scoreB = scores.find(item => item.playerName === playerB.name);
+                const holesA = scoreA?.holeScores || {};
+                const holesB = scoreB?.holeScores || {};
+                const { strokesA, strokesB } = getMatchPlayStrokeMap(playerA, playerB, courseHoles, scoringMode);
+
+                let aUp = 0;
+                let holesCompleted = 0;
+
+                courseHoles.forEach(hole => {
+                    const grossA = parseInt(holesA[hole.number], 10);
+                    const grossB = parseInt(holesB[hole.number], 10);
+                    if (!grossA || !grossB) return;
+
+                    holesCompleted += 1;
+                    const netA = grossA - (strokesA[hole.number] || 0);
+                    const netB = grossB - (strokesB[hole.number] || 0);
+
+                    if (netA < netB) aUp += 1;
+                    else if (netB < netA) aUp -= 1;
+                });
+
+                const remaining = courseHoles.length - holesCompleted;
+                const absoluteLead = Math.abs(aUp);
+                let finalStatus = holesCompleted ? 'All Square' : 'No holes completed';
+
+                if (holesCompleted && absoluteLead > remaining) {
+                    finalStatus = aUp > 0 ? `${playerA.name} wins ${absoluteLead}&${remaining}` : `${playerB.name} wins ${absoluteLead}&${remaining}`;
+                } else if (aUp > 0) {
+                    finalStatus = `${playerA.name} ${aUp} Up`;
+                } else if (aUp < 0) {
+                    finalStatus = `${playerB.name} ${Math.abs(aUp)} Up`;
+                }
+
+                return {
+                    id: pairing.id || `match_${index + 1}`,
+                    playerA,
+                    playerB,
+                    holesCompleted,
+                    totalHoles: courseHoles.length,
+                    status: finalStatus,
+                    scoringMode
+                };
+            }).filter(Boolean);
+        }
+
+        function toggleResultsMode(selectedEvent, isMatchPlay) {
+            document.getElementById('matchplay-section').style.display = isMatchPlay ? 'block' : 'none';
+            document.getElementById('overall-section').style.display = isMatchPlay ? 'none' : 'block';
+            document.getElementById('front9-section').style.display = isMatchPlay ? 'none' : 'block';
+            document.getElementById('back9-section').style.display = isMatchPlay ? 'none' : 'block';
+            document.getElementById('two-club-section').style.display = isMatchPlay ? 'none' : document.getElementById('two-club-section').style.display;
+            document.getElementById('prize-section').style.display = isMatchPlay ? 'none' : document.getElementById('prize-section').style.display;
+            document.getElementById('payout-summary-section').style.display = isMatchPlay ? 'none' : document.getElementById('payout-summary-section').style.display;
+            if (isMatchPlay) {
+                document.getElementById('payout-summary-body').innerHTML = '';
+                document.getElementById('payout-summary-footer').innerHTML = '';
+                document.getElementById('matchplay-body').innerHTML = calculateMatchPlayData(selectedEvent).map(match => `
+                    <tr>
+                        <td style="text-align:left; font-weight:700;">${match.playerA.name} vs ${match.playerB.name}</td>
+                        <td>${match.scoringMode === 'gross' ? 'Gross' : 'Net'}</td>
+                        <td style="font-weight:700; color:#9a3412;">${match.status}</td>
+                        <td>${match.holesCompleted}/${match.totalHoles} holes</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="4" style="text-align:center; padding:20px;">No match play pairings yet.</td></tr>';
+            }
+        }
+
+        function renderEmptyResults(message = 'No competition data available. Please check back later.') {
+            document.getElementById('competition-name').textContent = 'Competition Results';
+            document.getElementById('competition-info').innerHTML = `<strong>Status:</strong> ${message}`;
+            document.getElementById('scorecard-header').innerHTML = '<th colspan="100%">No scorecard data available</th>';
+            document.getElementById('scorecard-body').innerHTML = '';
+            document.getElementById('overall-body').innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px;">${message}</td></tr>`;
+            document.getElementById('overall-footer').innerHTML = '';
+            document.getElementById('front9-body').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No data available</td></tr>';
+            document.getElementById('front9-footer').innerHTML = '';
+            document.getElementById('back9-body').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No data available</td></tr>';
+            document.getElementById('back9-footer').innerHTML = '';
+            document.getElementById('player-summary-body').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #999;">No player summary available</td></tr>';
+            document.getElementById('two-club-section').style.display = 'none';
+            document.getElementById('prize-section').style.display = 'none';
+            document.getElementById('payout-summary-section').style.display = 'none';
+            document.getElementById('matchplay-section').style.display = 'none';
+            document.getElementById('payout-summary-body').innerHTML = '';
+            document.getElementById('payout-summary-footer').innerHTML = '';
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleString()}`;
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDAg-PMUqJxembdfLugDX_NGVDfHsktYHg",
+            authDomain: "golf-ambassadors.firebaseapp.com",
+            projectId: "golf-ambassadors",
+            storageBucket: "golf-ambassadors.firebasestorage.app",
+            messagingSenderId: "191082071768",
+            appId: "1:191082071768:web:815e488ccb141683f5f9ad"
+        };
+
+        let firebaseDb = null;
+        let sharedDocRef = null;
+
+        async function initializeFirebaseSync() {
+            if (firebaseDb && sharedDocRef) return true;
+
+            try {
+                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+                const { getFirestore, doc } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+                const app = initializeApp(firebaseConfig);
+                firebaseDb = getFirestore(app);
+                sharedDocRef = doc(firebaseDb, 'sharedState', 'golfAmbassadors');
+                return true;
+            } catch (error) {
+                console.error('Firebase initialization failed:', error);
+                return false;
+            }
+        }
+
+        async function loadResults() {
+            const eventData = getCurrentEventResultsData();
+
+            if (!eventData) {
+                const saved = localStorage.getItem('golfAmbassadors');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    renderResultsFromData({
+                        competitionName: data.competitionName || 'Golf Ambassadors Competition',
+                        course: data.course || { name: '', holes: [] },
+                        players: data.players || [],
+                        scores: data.scores || {},
+                        twoClubAchievements: data.twoClubAchievements || {},
+                        entryFee: data.entryFee || 0,
+                        selectedEvent: null
+                    });
+                }
+
+                const firebaseReady = await initializeFirebaseSync();
+                if (!firebaseReady) {
+                    if (!saved) renderEmptyResults();
+                    return;
+                }
+
+                try {
+                    const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+                    const snapshot = await getDoc(sharedDocRef);
+                    if (!snapshot.exists()) {
+                        if (!saved) renderEmptyResults();
+                        return;
+                    }
+
+                    const data = snapshot.data();
+                    localStorage.setItem('golfAmbassadors', JSON.stringify(data));
+                    renderResultsFromData({
+                        competitionName: data.competitionName || 'Golf Ambassadors Competition',
+                        course: data.course || { name: '', holes: [] },
+                        players: data.players || [],
+                        scores: data.scores || {},
+                        twoClubAchievements: data.twoClubAchievements || {},
+                        entryFee: data.entryFee || 0,
+                        selectedEvent: null
+                    });
+                    return;
+                } catch (error) {
+                    console.error('Firebase results load failed:', error);
+                    if (!saved) {
+                        renderEmptyResults();
+                    }
+                    return;
+                }
+            }
+
+            renderResultsFromData(eventData);
+        }
+
+        function renderResultsFromData(data) {
+            const competitionName = data.competitionName || 'Golf Ambassadors Competition';
+            const course = data.course || { name: '', holes: [] };
+            const players = data.players || [];
+            const scores = data.scores || {};
+            const twoClubAchievements = data.twoClubAchievements || {};
+            const entryFee = data.entryFee || 0;
+            const selectedEvent = data.selectedEvent || null;
+            const isMatchPlay = getCompetitionFormat(selectedEvent) === 'matchplay';
+            
+            // Update competition info
+            document.getElementById('competition-name').textContent = competitionName;
+            const participatingPlayers = players.filter(p => p.participating);
+            const totalPot = participatingPlayers.length * entryFee;
+            
+            let infoHTML = `<strong>Course:</strong> ${course.name || 'Not set'} | `;
+            infoHTML += `<strong>Participants:</strong> ${participatingPlayers.length} | `;
+            infoHTML += `<strong>Format:</strong> ${isMatchPlay ? `Match Play (${getScoringMode(selectedEvent) === 'gross' ? 'Gross' : 'Net'})` : `${course.holes.length || 0} holes`}`;
+            if (selectedEvent && selectedEvent.tee) {
+                infoHTML += ` | <strong>Tees:</strong> ${selectedEvent.tee}`;
+            }
+            if (selectedEvent && selectedEvent.date) {
+                infoHTML += ` | <strong>Date:</strong> ${selectedEvent.date}`;
+            }
+            if (!isMatchPlay && totalPot > 0) {
+                infoHTML += ` | <strong>Prize Pool:</strong> Ksh ${totalPot.toFixed(2)}`;
+            }
+            document.getElementById('competition-info').innerHTML = infoHTML;
+            toggleResultsMode(selectedEvent, isMatchPlay);
+            
+            // Generate Hole-by-Hole Scorecard
+            if (course.holes.length > 0 && participatingPlayers.length > 0) {
+                let headerHTML = '<th>Player</th><th>HCP</th>';
+                course.holes.forEach(hole => {
+                    headerHTML += `<th>H${hole.number}<br>Par ${hole.par}</th>`;
+                });
+                headerHTML += isMatchPlay ? '<th>Total</th><th>Mode</th>' : '<th>Total</th><th>Points</th>';
+                document.getElementById('scorecard-header').innerHTML = headerHTML;
+                
+                let scorecardHTML = '';
+                participatingPlayers.forEach(player => {
+                    const playerScores = scores[player.id] || [];
+                    const strokesPerHole = calculateStrokesPerHole(player.handicap, course.holes);
+                    const player2Clubs = twoClubAchievements[player.id] || [];
+                    
+                    let totalPoints = 0;
+                    let totalGross = 0;
+                    
+                    scorecardHTML += `<tr>
+                        <td style="text-align: left; font-weight: bold;">${player.name}</td>
+                        <td>${player.handicap}</td>`;
+                    
+                    course.holes.forEach((hole, index) => {
+                        const score = playerScores[hole.number - 1];
+                        const isPar3 = hole.par === 3;
+                        const has2Club = player2Clubs[hole.number - 1];
+                        
+                        let displayScore = score || '-';
+                        let cellStyle = 'font-weight: 500;';
+                        
+                        if (!isMatchPlay && isPar3 && has2Club && score === 2) {
+                            cellStyle = 'font-weight: bold; color: #2e7d32; border: 3px solid #4caf50; border-radius: 50%; background: #e8f5e9;';
+                        }
+                        
+                        if (score) {
+                            totalGross += score;
+                            const strokes = strokesPerHole[hole.number] || 0;
+                            totalPoints += calculateStablefordPoints(score, hole.par, strokes);
+                        }
+                        
+                        scorecardHTML += `<td style="${cellStyle}">${displayScore}</td>`;
+                    });
+                    
+                    scorecardHTML += `<td style="font-weight: bold;">${totalGross || '-'}</td>`;
+                    scorecardHTML += `<td class="stableford-points" style="font-weight: bold; font-size: 1.1em;">${isMatchPlay ? (getScoringMode(selectedEvent) === 'gross' ? 'Gross' : 'Net') : totalPoints}</td>`;
+                    scorecardHTML += '</tr>';
+                });
+                
+                document.getElementById('scorecard-body').innerHTML = scorecardHTML;
+            } else {
+                document.getElementById('scorecard-header').innerHTML = '<th colspan="100%">No scorecard data available</th>';
+                document.getElementById('scorecard-body').innerHTML = '';
+            }
+
+            if (!participatingPlayers.length) {
+                renderEmptyResults('No registered players found for this event yet.');
+                return;
+            }
+
+            if (isMatchPlay) {
+                document.getElementById('overall-body').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Match play uses the head-to-head board above.</td></tr>';
+                document.getElementById('overall-footer').innerHTML = '';
+                document.getElementById('front9-body').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Not used for match play</td></tr>';
+                document.getElementById('front9-footer').innerHTML = '';
+                document.getElementById('back9-body').innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">Not used for match play</td></tr>';
+                document.getElementById('back9-footer').innerHTML = '';
+                document.getElementById('player-summary-body').innerHTML = calculateMatchPlayData(selectedEvent).map(match => `
+                    <tr>
+                        <td style="text-align:left; font-weight:700;">${match.playerA.name} vs ${match.playerB.name}</td>
+                        <td>${match.scoringMode === 'gross' ? 'Gross' : 'Net'}</td>
+                        <td>${match.status}</td>
+                        <td>${match.holesCompleted}/${match.totalHoles} holes</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #999;">No match play pairings yet</td></tr>';
+                document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleString()}`;
+                return;
+            }
+            
+            // Calculate results
+            const results = [];
+            
+            participatingPlayers.forEach(player => {
+                const playerScores = scores[player.id] || [];
+                const strokesPerHole = calculateStrokesPerHole(player.handicap, course.holes);
+                const player2ClubCount = (twoClubAchievements[player.id] || []).filter(Boolean).length;
+                
+                let front9Points = 0;
+                let back9Points = 0;
+                let grossScore = 0;
+                let netScore = 0;
+                
+                course.holes.forEach((hole, index) => {
+                    const score = playerScores[index];
+                    if (score) {
+                        grossScore += score;
+                        const strokes = strokesPerHole[hole.number] || 0;
+                        netScore += (score - strokes);
+                        
+                        const points = calculateStablefordPoints(score, hole.par, strokes);
+                        
+                        if (hole.number <= 9) {
+                            front9Points += points;
+                        } else {
+                            back9Points += points;
+                        }
+                    }
+                });
+                
+                results.push({
+                    player: player,
+                    front9Points: front9Points,
+                    back9Points: back9Points,
+                    totalPoints: front9Points + back9Points,
+                    twoClubCount: player2ClubCount,
+                    grossScore: grossScore,
+                    netScore: netScore
+                });
+            });
+            
+            // Calculate prize splits (50/30/20 for overall, 40/30/20/10 for front/back 9)
+            const overallPrizes = totalPot > 0 ? [totalPot * 0.5, totalPot * 0.3, totalPot * 0.2] : [0, 0, 0];
+            const ninePrizes = totalPot > 0 ? [totalPot * 0.4, totalPot * 0.3, totalPot * 0.2, totalPot * 0.1] : [0, 0, 0, 0];
+            const payoutSummaryRows = [];
+            
+            // Generate Overall Leaderboard
+            const overallResults = [...results].sort((a, b) => b.totalPoints - a.totalPoints);
+            let overallHTML = '';
+            let overallTotalWinnings = 0;
+            
+            overallResults.forEach((result, index) => {
+                const twoClubDisplay = result.twoClubCount > 0
+                    ? `<span style="color: #2e7d32; font-weight: bold;">${result.twoClubCount} 🏆</span>`
+                    : '-';
+                
+                const rankStyle = index === 0 ? 'background: #ffd700; font-weight: bold;' :
+                                 index === 1 ? 'background: #c0c0c0; font-weight: bold;' :
+                                 index === 2 ? 'background: #cd7f32; font-weight: bold;' : '';
+                
+                const winnings = index < 3 ? overallPrizes[index] : 0;
+                overallTotalWinnings += winnings;
+                if (winnings > 0) {
+                    payoutSummaryRows.push({
+                        category: 'Overall',
+                        rank: `${index + 1}`,
+                        winner: result.player.name,
+                        amount: winnings
+                    });
+                }
+                const winningsDisplay = winnings > 0 ? `Ksh ${winnings.toFixed(2)}` : '-';
+                
+                overallHTML += `
+                    <tr style="${rankStyle}">
+                        <td style="font-weight: bold; font-size: 1.1em;">${index + 1}</td>
+                        <td style="text-align: left; font-weight: bold;">${result.player.name} (${result.player.handicap})</td>
+                        <td class="stableford-points" style="font-size: 1.2em;">${result.totalPoints}</td>
+                        <td>${twoClubDisplay}</td>
+                        <td>${result.grossScore || '-'}</td>
+                        <td>${result.netScore || '-'}</td>
+                        <td style="font-weight: bold; color: #2e7d32;">${winningsDisplay}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('overall-body').innerHTML = overallHTML;
+            
+            // Add total row for overall
+            const overallFooter = `
+                <tr style="background: #e3f2fd; font-weight: bold;">
+                    <td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL:</td>
+                    <td style="color: #1e3a8a; font-size: 1.1em;">Ksh ${overallTotalWinnings.toFixed(2)}</td>
+                </tr>
+            `;
+            document.getElementById('overall-footer').innerHTML = overallFooter;
+            
+            // Generate Front 9 Leaderboard
+            const front9Results = [...results].sort((a, b) => b.front9Points - a.front9Points);
+            let front9HTML = '';
+            let front9TotalWinnings = 0;
+            
+            front9Results.forEach((result, index) => {
+                const rankStyle = index === 0 ? 'background: #ffd700;' :
+                                 index === 1 ? 'background: #c0c0c0;' :
+                                 index === 2 ? 'background: #cd7f32;' :
+                                 index === 3 ? 'background: #e8c39e;' : '';
+                
+                const winnings = index < 4 ? ninePrizes[index] : 0;
+                front9TotalWinnings += winnings;
+                if (winnings > 0) {
+                    payoutSummaryRows.push({
+                        category: 'Front 9',
+                        rank: `${index + 1}`,
+                        winner: result.player.name,
+                        amount: winnings
+                    });
+                }
+                const winningsDisplay = winnings > 0 ? `Ksh ${winnings.toFixed(2)}` : '-';
+                
+                front9HTML += `
+                    <tr style="${rankStyle}">
+                        <td style="font-weight: bold;">${index + 1}</td>
+                        <td style="text-align: left;">${result.player.name} (${result.player.handicap})</td>
+                        <td class="stableford-points" style="font-size: 1.1em;">${result.front9Points}</td>
+                        <td style="font-weight: bold; color: #2e7d32;">${winningsDisplay}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('front9-body').innerHTML = front9HTML;
+            
+            // Add total row for front 9
+            const front9Footer = `
+                <tr style="background: #e3f2fd; font-weight: bold;">
+                    <td colspan="3" style="text-align: right; padding-right: 20px;">TOTAL:</td>
+                    <td style="color: #1e3a8a; font-size: 1.1em;">Ksh ${front9TotalWinnings.toFixed(2)}</td>
+                </tr>
+            `;
+            document.getElementById('front9-footer').innerHTML = front9Footer;
+            
+            // Generate Back 9 Leaderboard
+            const back9Results = [...results].sort((a, b) => b.back9Points - a.back9Points);
+            let back9HTML = '';
+            let back9TotalWinnings = 0;
+            
+            back9Results.forEach((result, index) => {
+                const rankStyle = index === 0 ? 'background: #ffd700;' :
+                                 index === 1 ? 'background: #c0c0c0;' :
+                                 index === 2 ? 'background: #cd7f32;' :
+                                 index === 3 ? 'background: #e8c39e;' : '';
+                
+                const winnings = index < 4 ? ninePrizes[index] : 0;
+                back9TotalWinnings += winnings;
+                if (winnings > 0) {
+                    payoutSummaryRows.push({
+                        category: 'Back 9',
+                        rank: `${index + 1}`,
+                        winner: result.player.name,
+                        amount: winnings
+                    });
+                }
+                const winningsDisplay = winnings > 0 ? `Ksh ${winnings.toFixed(2)}` : '-';
+                
+                back9HTML += `
+                    <tr style="${rankStyle}">
+                        <td style="font-weight: bold;">${index + 1}</td>
+                        <td style="text-align: left;">${result.player.name} (${result.player.handicap})</td>
+                        <td class="stableford-points" style="font-size: 1.1em;">${result.back9Points}</td>
+                        <td style="font-weight: bold; color: #2e7d32;">${winningsDisplay}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('back9-body').innerHTML = back9HTML;
+            
+            // Add total row for back 9
+            const back9Footer = `
+                <tr style="background: #e3f2fd; font-weight: bold;">
+                    <td colspan="3" style="text-align: right; padding-right: 20px;">TOTAL:</td>
+                    <td style="color: #1e3a8a; font-size: 1.1em;">Ksh ${back9TotalWinnings.toFixed(2)}</td>
+                </tr>
+            `;
+            document.getElementById('back9-footer').innerHTML = back9Footer;
+            
+            // Generate 2-Club Winners Section
+            const twoClubWinners = [];
+            participatingPlayers.forEach(player => {
+                const player2Clubs = twoClubAchievements[player.id] || [];
+                const twoClubHoles = [];
+                
+                // Find which holes had 2-club achievements
+                course.holes.forEach((hole, index) => {
+                    if (player2Clubs[hole.number - 1] && hole.par === 3) {
+                        twoClubHoles.push(hole.number);
+                    }
+                });
+                
+                if (twoClubHoles.length > 0) {
+                    twoClubWinners.push({
+                        player: player,
+                        holes: twoClubHoles,
+                        count: twoClubHoles.length
+                    });
+                }
+            });
+            
+            // Display 2-Club Winners if any
+            if (twoClubWinners.length > 0) {
+                document.getElementById('two-club-section').style.display = 'block';
+                
+                // Sort by number of wins (descending)
+                twoClubWinners.sort((a, b) => b.count - a.count);
+                
+                // Calculate 2-club prize pool (10% of total pot)
+                const twoClubPot = totalPot * 0.10;
+                const totalTwoClubWins = twoClubWinners.reduce((sum, w) => sum + w.count, 0);
+                const prizePerWin = totalTwoClubWins > 0 ? twoClubPot / totalTwoClubWins : 0;
+                
+                let twoClubHTML = '';
+                let twoClubTotalPrize = 0;
+                
+                twoClubWinners.forEach((winner, index) => {
+                    const prize = winner.count * prizePerWin;
+                    twoClubTotalPrize += prize;
+                    if (prize > 0) {
+                        payoutSummaryRows.push({
+                            category: '2-Club',
+                            rank: `${index + 1}`,
+                            winner: winner.player.name,
+                            amount: prize
+                        });
+                    }
+                    
+                    const rankStyle = index === 0 ? 'background: #ffd700; font-weight: bold;' :
+                                     index === 1 ? 'background: #c0c0c0;' :
+                                     index === 2 ? 'background: #cd7f32;' : '';
+                    
+                    const holesDisplay = winner.holes.map(h => `H${h}`).join(', ');
+                    const prizeDisplay = prize > 0 ? `Ksh ${prize.toFixed(2)}` : '-';
+                    
+                    twoClubHTML += `
+                        <tr style="${rankStyle}">
+                            <td style="font-weight: bold; font-size: 1.1em;">${index + 1}</td>
+                            <td style="text-align: left; font-weight: bold;">${winner.player.name}</td>
+                            <td>${winner.player.handicap}</td>
+                            <td style="color: #2e7d32; font-weight: bold;">${holesDisplay}</td>
+                            <td style="font-weight: bold; font-size: 1.1em; color: #2e7d32;">${winner.count}</td>
+                            <td style="font-weight: bold; color: #2e7d32; font-size: 1.05em;">${prizeDisplay}</td>
+                        </tr>
+                    `;
+                });
+                
+                document.getElementById('two-club-body').innerHTML = twoClubHTML;
+                
+                // Add total row for 2-club
+                const twoClubFooter = `
+                    <tr style="background: #e3f2fd; font-weight: bold;">
+                        <td colspan="4" style="text-align: right; padding-right: 20px;">TOTAL 2-CLUB PRIZE POOL (10%):</td>
+                        <td style="color: #1e3a8a; font-size: 1.1em;">${totalTwoClubWins} wins</td>
+                        <td style="color: #1e3a8a; font-size: 1.1em;">Ksh ${twoClubTotalPrize.toFixed(2)}</td>
+                    </tr>
+                `;
+                document.getElementById('two-club-footer').innerHTML = twoClubFooter;
+            } else {
+                document.getElementById('two-club-section').style.display = 'none';
+            }
+            
+            // Show prize distribution if available
+            if (totalPot > 0 && overallResults.length >= 3) {
+                document.getElementById('prize-section').style.display = 'block';
+                let prizeHTML = `<p><strong>Total Prize Pool:</strong> Ksh ${totalPot.toFixed(2)}</p>`;
+                prizeHTML += `<p style="margin-top: 10px;"><strong>Overall Leaderboard Total:</strong> Ksh ${overallTotalWinnings.toFixed(2)}</p>`;
+                prizeHTML += `<p style="margin-top: 6px;"><strong>Front 9 Total:</strong> Ksh ${front9TotalWinnings.toFixed(2)}</p>`;
+                prizeHTML += `<p style="margin-top: 6px;"><strong>Back 9 Total:</strong> Ksh ${back9TotalWinnings.toFixed(2)}</p>`;
+                if (document.getElementById('two-club-section').style.display !== 'none') {
+                    const totalTwoClubWins = twoClubWinners.reduce((sum, w) => sum + w.count, 0);
+                    prizeHTML += `<p style="margin-top: 6px;"><strong>2-Club Total:</strong> Ksh ${(totalPot * 0.10).toFixed(2)} <span style="color:#64748b;">(${totalTwoClubWins} winning birdies)</span></p>`;
+                }
+                document.getElementById('prize-info').innerHTML = prizeHTML;
+            } else {
+                document.getElementById('prize-section').style.display = 'none';
+            }
+
+            if (payoutSummaryRows.length > 0) {
+                const payoutSummaryTotal = payoutSummaryRows.reduce((sum, row) => sum + row.amount, 0);
+                document.getElementById('payout-summary-section').style.display = 'block';
+                document.getElementById('payout-summary-body').innerHTML = payoutSummaryRows.map(row => `
+                    <tr>
+                        <td>${row.category}</td>
+                        <td>${row.rank}</td>
+                        <td style="text-align:left; font-weight:700;">${row.winner}</td>
+                        <td style="font-weight:700; color:#166534;">Ksh ${row.amount.toFixed(2)}</td>
+                    </tr>
+                `).join('');
+                document.getElementById('payout-summary-footer').innerHTML = `
+                    <tr style="background: #e3f2fd; font-weight: bold;">
+                        <td colspan="3" style="text-align: right; padding-right: 20px;">TOTAL TO BE PAID:</td>
+                        <td style="color: #1e3a8a; font-size: 1.1em;">Ksh ${payoutSummaryTotal.toFixed(2)}</td>
+                    </tr>
+                `;
+            } else {
+                document.getElementById('payout-summary-section').style.display = 'none';
+                document.getElementById('payout-summary-body').innerHTML = '';
+                document.getElementById('payout-summary-footer').innerHTML = '';
+            }
+            
+            // Generate Player Summary - Only show players with 2-club achievements
+            let summaryHTML = '';
+            let has2ClubAchievers = false;
+            
+            participatingPlayers.forEach(player => {
+                const player2Clubs = twoClubAchievements[player.id] || [];
+                const twoClubHoles = [];
+                
+                // Find which holes had 2-club achievements
+                course.holes.forEach((hole, index) => {
+                    if (player2Clubs[hole.number - 1] && hole.par === 3) {
+                        twoClubHoles.push(hole.number);
+                    }
+                });
+                
+                const twoClubCount = twoClubHoles.length;
+                
+                // Only add row if player has 2-club achievements
+                if (twoClubCount > 0) {
+                    has2ClubAchievers = true;
+                    const twoClubDisplay = `<span style="color: #2e7d32; font-weight: bold;">${twoClubCount} 🏆</span>`;
+                    const holesDisplay = `Holes: ${twoClubHoles.join(', ')}`;
+                    
+                    summaryHTML += `
+                        <tr>
+                            <td style="text-align: left; font-weight: bold;">${player.name}</td>
+                            <td>${player.handicap}</td>
+                            <td>${twoClubDisplay}</td>
+                            <td style="color: #2e7d32; font-weight: bold;">${holesDisplay}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (!has2ClubAchievers) {
+                summaryHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #999;">No 2-club achievements yet</td></tr>';
+            }
+            
+            document.getElementById('player-summary-body').innerHTML = summaryHTML;
+            
+            // Update last updated time
+            document.getElementById('last-updated').textContent = `Last updated: ${new Date().toLocaleString()}`;
+        }
+        
+        // Helper functions
+        function calculateStablefordPoints(grossScore, par, strokesReceived) {
+            const netScore = grossScore - strokesReceived;
+            const scoreToPar = netScore - par;
+            
+            if (scoreToPar <= -3) return 5;
+            if (scoreToPar === -2) return 4;
+            if (scoreToPar === -1) return 3;
+            if (scoreToPar === 0) return 2;
+            if (scoreToPar === 1) return 1;
+            return 0;
+        }
+        
+        function calculateStrokesPerHole(handicap, holes) {
+            const strokesPerHole = {};
+            const absHandicap = Math.abs(handicap);
+            
+            holes.forEach(hole => {
+                const fullRounds = Math.floor(absHandicap / 18);
+                const remainder = absHandicap % 18;
+                
+                let strokes = fullRounds;
+                if (hole.handicap <= remainder) {
+                    strokes += 1;
+                }
+                
+                strokesPerHole[hole.number] = strokes;
+            });
+            
+            return strokesPerHole;
+        }
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadResults, 30000);
+        
+        // Load results on page load
+        document.addEventListener('DOMContentLoaded', loadResults);
+    </script>
+</body>
+</html>

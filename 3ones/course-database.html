@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf4us - Course Database Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: #4ade80;
+            color: #0f2027;
+        }
+        .tab-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1em;
+        }
+        textarea {
+            min-height: 150px;
+            font-family: monospace;
+        }
+        button {
+            padding: 12px 24px;
+            background: #4ade80;
+            color: #0f2027;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #22c55e;
+            transform: translateY(-2px);
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-5px);
+        }
+        .course-list {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .course-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .course-item h3 {
+            margin-bottom: 10px;
+            color: #4ade80;
+        }
+        .course-item p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+        .course-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .info-box {
+            background: rgba(74, 222, 128, 0.1);
+            border-left: 4px solid #4ade80;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .warning-box {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 4px solid #fbbf24;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        .stat-label {
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <a href="javascript:history.back()" class="back-button">
+        ← Back
+    </a>
+    
+    <div class="container">
+        <h1>⛳ Golf4us Course Database Manager</h1>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCourses">0</div>
+                <div class="stat-label">Total Courses</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="mappedCourses">0</div>
+                <div class="stat-label">Fully Mapped</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="osmCourses">0</div>
+                <div class="stat-label">From OSM</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('manual')">➕ Add Course Manually</button>
+            <button class="tab" onclick="showTab('import')">📥 Import JSON</button>
+            <button class="tab" onclick="showTab('view')">📋 View All Courses</button>
+            <button class="tab" onclick="showTab('export')">💾 Export Database</button>
+        </div>
+
+        <!-- Manual Entry Tab -->
+        <div id="manual" class="tab-content active">
+            <div class="info-box">
+                <strong>📝 Manual Course Entry</strong><br>
+                Add a golf course with accurate hole-by-hole data from the scorecard.
+            </div>
+
+            <form id="manualForm">
+                <div class="form-group">
+                    <label>Course Name *</label>
+                    <input type="text" id="courseName" required placeholder="e.g., Buttonwood Golf Course">
+                </div>
+
+                <div class="form-group">
+                    <label>City *</label>
+                    <input type="text" id="courseCity" required placeholder="e.g., Rochester">
+                </div>
+
+                <div class="form-group">
+                    <label>State *</label>
+                    <input type="text" id="courseState" required placeholder="e.g., NY">
+                </div>
+
+                <div class="form-group">
+                    <label>GPS Coordinates *</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="number" step="0.000001" id="courseLat" required placeholder="Latitude (e.g., 43.1234)">
+                        <input type="number" step="0.000001" id="courseLon" required placeholder="Longitude (e.g., -77.5678)">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Total Par *</label>
+                    <input type="number" id="coursePar" required placeholder="e.g., 72">
+                </div>
+
+                <div class="form-group">
+                    <label>Hole Data (JSON) *</label>
+                    <textarea id="holeData" placeholder='[
+  {"number": 1, "par": 5, "strokeIndex": 1, "yardage": 520, "teeBox": {"lat": 43.1234, "lon": -77.5678}, "green": {"lat": 43.1240, "lon": -77.5670}},
+  {"number": 2, "par": 4, "strokeIndex": 7, "yardage": 380, ...},
+  ...
+]'></textarea>
+                    <small style="opacity: 0.7;">Use the Course Mapper tool to generate this data, or enter manually from scorecard.</small>
+                </div>
+
+                <button type="submit">💾 Save Course</button>
+            </form>
+        </div>
+
+        <!-- Import Tab -->
+        <div id="import" class="tab-content">
+            <div class="info-box">
+                <strong>📥 Import Course Data</strong><br>
+                Import courses from JSON file (exported from Course Mapper or other sources).
+            </div>
+
+            <div class="form-group">
+                <label>JSON Data</label>
+                <textarea id="importJson" placeholder='Paste JSON data here...'></textarea>
+            </div>
+
+            <button onclick="importCourses()">📥 Import Courses</button>
+        </div>
+
+        <!-- View Tab -->
+        <div id="view" class="tab-content">
+            <div class="info-box">
+                <strong>📋 All Courses in Database</strong><br>
+                View, edit, or delete courses from your local database.
+            </div>
+
+            <div class="course-list" id="courseList">
+                <!-- Courses will be listed here -->
+            </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div id="export" class="tab-content">
+            <div class="info-box">
+                <strong>💾 Export Course Database</strong><br>
+                Download your course database as JSON for backup or sharing.
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Backup Recommended</strong><br>
+                Export your database regularly to avoid data loss.
+            </div>
+
+            <button onclick="exportDatabase()">💾 Download Database (JSON)</button>
+            <button onclick="exportForApp()" style="margin-left: 10px;">📱 Export for GPS App</button>
+
+            <div style="margin-top: 20px;">
+                <h3>Database Preview:</h3>
+                <textarea id="exportPreview" readonly style="margin-top: 10px;"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load courses from localStorage
+        function loadCourses() {
+            const stored = localStorage.getItem('customCourses');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Save courses to localStorage
+        function saveCourses(courses) {
+            localStorage.setItem('customCourses', JSON.stringify(courses));
+            updateStats();
+            renderCourseList();
+        }
+
+        // Update statistics
+        function updateStats() {
+            const courses = loadCourses();
+            document.getElementById('totalCourses').textContent = courses.length;
+            document.getElementById('mappedCourses').textContent = courses.filter(c => c.holeData && c.holeData.length === 18).length;
+            document.getElementById('osmCourses').textContent = courses.filter(c => c.source === 'OpenStreetMap').length;
+        }
+
+        // Show tab
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+
+            if (tabName === 'view') {
+                renderCourseList();
+            } else if (tabName === 'export') {
+                updateExportPreview();
+            }
+        }
+
+        // Manual form submission
+        document.getElementById('manualForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            try {
+                const holeData = JSON.parse(document.getElementById('holeData').value);
+                
+                const course = {
+                    id: 'custom-' + Date.now(),
+                    name: document.getElementById('courseName').value,
+                    city: document.getElementById('courseCity').value,
+                    state: document.getElementById('courseState').value,
+                    location: {
+                        lat: parseFloat(document.getElementById('courseLat').value),
+                        lon: parseFloat(document.getElementById('courseLon').value)
+                    },
+                    holes: holeData.length,
+                    par: parseInt(document.getElementById('coursePar').value),
+                    holeData: holeData,
+                    source: 'Manual Entry',
+                    dateAdded: new Date().toISOString()
+                };
+
+                const courses = loadCourses();
+                courses.push(course);
+                saveCourses(courses);
+
+                alert('✅ Course added successfully!');
+                document.getElementById('manualForm').reset();
+            } catch (error) {
+                alert('❌ Error: Invalid JSON data. Please check your hole data format.');
+                console.error(error);
+            }
+        });
+
+        // Import courses
+        function importCourses() {
+            try {
+                const json = document.getElementById('importJson').value;
+                const imported = JSON.parse(json);
+                const courses = loadCourses();
+                
+                if (Array.isArray(imported)) {
+                    courses.push(...imported);
+                } else {
+                    courses.push(imported);
+                }
+                
+                saveCourses(courses);
+                alert(`✅ Imported ${Array.isArray(imported) ? imported.length : 1} course(s)!`);
+                document.getElementById('importJson').value = '';
+            } catch (error) {
+                alert('❌ Error: Invalid JSON format.');
+                console.error(error);
+            }
+        }
+
+        // Render course list
+        function renderCourseList() {
+            const courses = loadCourses();
+            const list = document.getElementById('courseList');
+
+            if (courses.length === 0) {
+                list.innerHTML = '<p style="text-align: center; opacity: 0.7;">No courses in database yet. Add one manually or import from JSON.</p>';
+                return;
+            }
+
+            list.innerHTML = courses.map((course, index) => `
+                <div class="course-item">
+                    <h3>${course.name}</h3>
+                    <p><strong>Location:</strong> ${course.city}, ${course.state}</p>
+                    <p><strong>Coordinates:</strong> ${course.location.lat.toFixed(6)}, ${course.location.lon.toFixed(6)}</p>
+                    <p><strong>Holes:</strong> ${course.holes} | <strong>Par:</strong> ${course.par}</p>
+                    <p><strong>Source:</strong> ${course.source || 'Unknown'}</p>
+                    <p><strong>Hole Data:</strong> ${course.holeData ? '✅ Complete' : '❌ Missing'}</p>
+                    <div class="course-actions">
+                        <button class="btn-small" onclick="viewCourse(${index})">👁️ View Details</button>
+                        <button class="btn-small btn-secondary" onclick="editCourse(${index})">✏️ Edit</button>
+                        <button class="btn-small btn-danger" onclick="deleteCourse(${index})">🗑️ Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // View course details
+        function viewCourse(index) {
+            const courses = loadCourses();
+            const course = courses[index];
+            alert(JSON.stringify(course, null, 2));
+        }
+
+        // Edit course
+        function editCourse(index) {
+            const courses = loadCourses();
+            const course = courses[index];
+            
+            // Switch to manual tab and populate form
+            showTab('manual');
+            document.getElementById('courseName').value = course.name;
+            document.getElementById('courseCity').value = course.city;
+            document.getElementById('courseState').value = course.state;
+            document.getElementById('courseLat').value = course.location.lat;
+            document.getElementById('courseLon').value = course.location.lon;
+            document.getElementById('coursePar').value = course.par;
+            document.getElementById('holeData').value = JSON.stringify(course.holeData, null, 2);
+            
+            // Delete old entry
+            courses.splice(index, 1);
+            saveCourses(courses);
+        }
+
+        // Delete course
+        function deleteCourse(index) {
+            if (confirm('Are you sure you want to delete this course?')) {
+                const courses = loadCourses();
+                courses.splice(index, 1);
+                saveCourses(courses);
+                alert('✅ Course deleted');
+            }
+        }
+
+        // Export database
+        function exportDatabase() {
+            const courses = loadCourses();
+            const json = JSON.stringify(courses, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `golf4us-courses-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        // Export for GPS app
+        function exportForApp() {
+            const courses = loadCourses();
+            const appFormat = `// Add these courses to your gps-app.html fallbackCourses array:\n\n${JSON.stringify(courses, null, 2)}`;
+            const blob = new Blob([appFormat], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'courses-for-gps-app.js';
+            a.click();
+        }
+
+        // Update export preview
+        function updateExportPreview() {
+            const courses = loadCourses();
+            document.getElementById('exportPreview').value = JSON.stringify(courses, null, 2);
+        }
+
+        // Initialize
+        updateStats();
+        renderCourseList();
+    </script>
+</body>
+</html>

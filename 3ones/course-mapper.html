@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Course Mapper - Add Hole GPS Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1em;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-5px);
+        }
+
+        .current-location {
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .location-value {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .hole-list {
+            margin-top: 30px;
+        }
+
+        .hole-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hole-item.complete {
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.4);
+        }
+
+        .export-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <a href="javascript:history.back()" class="back-button">
+        ← Back
+    </a>
+    
+    <div class="container">
+        <h1>⛳ Course Hole Mapper</h1>
+
+        <div class="info-box">
+            <strong>📍 How to Use:</strong><br>
+            1. Walk to each tee box and tap "Mark Tee Box"<br>
+            2. Walk to the green and tap "Mark Green"<br>
+            3. Repeat for all 18 holes<br>
+            4. Export the data at the end
+        </div>
+
+        <div class="current-location">
+            <div>Your Current Location:</div>
+            <div class="location-value" id="currentLocation">Getting GPS...</div>
+            <div style="font-size: 0.85em; margin-top: 5px; opacity: 0.8;" id="accuracy">Accuracy: ---</div>
+        </div>
+
+        <div class="card">
+            <div class="form-group">
+                <label>Course Name</label>
+                <input type="text" id="courseName" placeholder="e.g., Cragie Brae Golf Club" value="Cragie Brae Golf Club">
+            </div>
+
+            <div class="form-group">
+                <label>Current Hole</label>
+                <select id="holeNumber">
+                    <option value="1">Hole 1</option>
+                    <option value="2">Hole 2</option>
+                    <option value="3">Hole 3</option>
+                    <option value="4">Hole 4</option>
+                    <option value="5">Hole 5</option>
+                    <option value="6">Hole 6</option>
+                    <option value="7">Hole 7</option>
+                    <option value="8">Hole 8</option>
+                    <option value="9">Hole 9</option>
+                    <option value="10">Hole 10</option>
+                    <option value="11">Hole 11</option>
+                    <option value="12">Hole 12</option>
+                    <option value="13">Hole 13</option>
+                    <option value="14">Hole 14</option>
+                    <option value="15">Hole 15</option>
+                    <option value="16">Hole 16</option>
+                    <option value="17">Hole 17</option>
+                    <option value="18">Hole 18</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Par</label>
+                <select id="holePar">
+                    <option value="3">Par 3</option>
+                    <option value="4" selected>Par 4</option>
+                    <option value="5">Par 5</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" id="markTeeBtn">📍 Mark Tee Box</button>
+            <button class="btn btn-primary" id="markGreenBtn">🏁 Mark Green</button>
+            <button class="btn btn-success" id="nextHoleBtn">Next Hole →</button>
+        </div>
+
+        <div class="hole-list">
+            <h3 style="margin-bottom: 15px;">Holes Mapped:</h3>
+            <div id="holesList"></div>
+        </div>
+
+        <div class="export-section">
+            <h3 style="margin-bottom: 15px;">Export Course Data:</h3>
+            <button class="btn btn-success" id="exportBtn">📤 Export JSON</button>
+            <textarea id="exportData" readonly style="margin-top: 15px;"></textarea>
+        </div>
+    </div>
+
+    <script>
+        let currentPosition = null;
+        let holes = {};
+        let watchId = null;
+
+        // Start GPS tracking
+        function startGPS() {
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    currentPosition = position.coords;
+                    document.getElementById('currentLocation').textContent = 
+                        `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                    document.getElementById('accuracy').textContent = 
+                        `Accuracy: ${Math.round(position.coords.accuracy)}m`;
+                },
+                (error) => {
+                    console.error('GPS error:', error);
+                    document.getElementById('currentLocation').textContent = 'GPS Error';
+                },
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            );
+        }
+
+        // Mark tee box
+        document.getElementById('markTeeBtn').addEventListener('click', () => {
+            if (!currentPosition) {
+                alert('Waiting for GPS...');
+                return;
+            }
+
+            const holeNum = document.getElementById('holeNumber').value;
+            const par = document.getElementById('holePar').value;
+
+            if (!holes[holeNum]) {
+                holes[holeNum] = { number: parseInt(holeNum), par: parseInt(par) };
+            }
+
+            holes[holeNum].teeBox = {
+                lat: currentPosition.latitude,
+                lon: currentPosition.longitude
+            };
+
+            alert(`Tee box marked for Hole ${holeNum}!`);
+            updateHolesList();
+        });
+
+        // Mark green
+        document.getElementById('markGreenBtn').addEventListener('click', () => {
+            if (!currentPosition) {
+                alert('Waiting for GPS...');
+                return;
+            }
+
+            const holeNum = document.getElementById('holeNumber').value;
+            const par = document.getElementById('holePar').value;
+
+            if (!holes[holeNum]) {
+                holes[holeNum] = { number: parseInt(holeNum), par: parseInt(par) };
+            }
+
+            holes[holeNum].green = {
+                lat: currentPosition.latitude,
+                lon: currentPosition.longitude
+            };
+
+            alert(`Green marked for Hole ${holeNum}!`);
+            updateHolesList();
+        });
+
+        // Next hole
+        document.getElementById('nextHoleBtn').addEventListener('click', () => {
+            const currentHole = parseInt(document.getElementById('holeNumber').value);
+            if (currentHole < 18) {
+                document.getElementById('holeNumber').value = currentHole + 1;
+            }
+        });
+
+        // Update holes list
+        function updateHolesList() {
+            const list = document.getElementById('holesList');
+            const holeNumbers = Object.keys(holes).sort((a, b) => parseInt(a) - parseInt(b));
+
+            if (holeNumbers.length === 0) {
+                list.innerHTML = '<p style="opacity: 0.7; text-align: center;">No holes mapped yet</p>';
+                return;
+            }
+
+            list.innerHTML = holeNumbers.map(num => {
+                const hole = holes[num];
+                const hasTee = hole.teeBox ? '✓' : '✗';
+                const hasGreen = hole.green ? '✓' : '✗';
+                const complete = hole.teeBox && hole.green;
+
+                return `
+                    <div class="hole-item ${complete ? 'complete' : ''}">
+                        <div>
+                            <strong>Hole ${num}</strong> (Par ${hole.par})<br>
+                            <small>Tee: ${hasTee} | Green: ${hasGreen}</small>
+                        </div>
+                        ${complete ? '<span style="color: #4ade80;">✓ Complete</span>' : '<span style="opacity: 0.5;">Incomplete</span>'}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Export data
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const courseName = document.getElementById('courseName').value;
+            const holeArray = Object.values(holes).sort((a, b) => a.number - b.number);
+
+            const courseData = {
+                name: courseName,
+                holes: holeArray
+            };
+
+            const json = JSON.stringify(courseData, null, 2);
+            document.getElementById('exportData').value = json;
+            alert('Course data exported! Copy the JSON below.');
+        });
+
+        // Initialize
+        startGPS();
+        updateHolesList();
+    </script>
+</body>
+</html>
