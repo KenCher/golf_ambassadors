@@ -522,20 +522,21 @@ def create_presentation_with_previous_updates(board_data):
     title.text = "US KVM & Linux Status"
     subtitle.text = f"{datetime.now().strftime('%B %d, %Y')}\nBy Kennedy Cheruiyot"
     
-    # Categorize items - separate bringup/tools, BU work items, bugs/fixes, blocked/on hold, done, CI failures, and other items
+    # Categorize items - separate bringup/tools, bugs/fixes (incl. BU* cases), blocked/on hold, done, CI failures, and other items
     bringup_items = []
-    bu_items = []       # BU* work items grouped together
-    bug_items = []
+    bug_items = []      # Includes BU* bug cases (grouped together at the end of this section)
     blocked_items = []
     done_items = []
     ci_failure_items = []
     other_items = []
-    
+
+    bu_items = []       # BU* cases collected separately so they can be sorted, then appended to bug_items
+
     for item in all_items_to_show:
         item_name = item['name'].lower()
         item_name_raw = item['name']
         status = get_status(item).lower()
-        
+
         # Check if it's a CI failure item (starts with test_) - track separately
         if item_name.startswith('test_'):
             ci_failure_items.append(item)
@@ -548,26 +549,28 @@ def create_presentation_with_previous_updates(board_data):
         # Check if it's a bringup/tools item
         elif 'io1814' in item_name or 'bring-up setup' in item_name or 'bringup' in item_name:
             bringup_items.append(item)
-        # Check if it's a BU* work item (name starts with BU followed by digits or dash)
-        elif re.match(r'^BU[\d\-]', item_name_raw, re.IGNORECASE):
+        # BU* bug cases (BUZ*, BU<digits>, BU-<digits>) — collect separately to sort, then add to bug_items
+        elif re.match(r'^BU[Z\d\-]', item_name_raw, re.IGNORECASE):
             bu_items.append(item)
-        # Check if it's a bug/fix (contains 'bug', starts with 'bz', contains 'rhbz', or s390-tools/zipl related)
+        # Other bug/fix items (contains 'bug', starts with 'bz', contains 'rhbz', or s390-tools/zipl related)
         elif ('bug' in item_name or item_name.startswith('bz') or 'rhbz' in item_name or
               's390-tools' in item_name or 'zipl' in item_name):
             bug_items.append(item)
         else:
             other_items.append(item)
-    
-    # Sort BU items by their BU number for consistent ordering
+
+    # Sort BU items numerically (strip leading letters after BU, e.g. BUZ217146 → 217146)
     def bu_sort_key(item):
-        m = re.match(r'^BU[\-]?(\d+)', item['name'], re.IGNORECASE)
+        m = re.search(r'(\d+)', item['name'])
         return int(m.group(1)) if m else 0
     bu_items.sort(key=bu_sort_key)
 
+    # Append BU* items after other bug items so they are grouped at the end of Bugs and Fixes
+    bug_items = bug_items + bu_items
+
     print(f"\nCategorization:")
     print(f"  Bringup and tools: {len(bringup_items)} items")
-    print(f"  BU work items:     {len(bu_items)} items")
-    print(f"  Bugs and Fixes:    {len(bug_items)} items")
+    print(f"  Bugs and Fixes:    {len(bug_items)} items  (incl. {len(bu_items)} BU* cases)")
     print(f"  Blocked/On Hold:   {len(blocked_items)} items")
     print(f"  Done:              {len(done_items)} items")
     print(f"  CI Failures:       {len(ci_failure_items)} items")
@@ -1003,33 +1006,29 @@ def create_presentation_with_previous_updates(board_data):
     if bringup_items:
         print(f"\nCreating slides for Bringup and tools ({len(bringup_items)} items)...")
         create_slides_for_group(bringup_items, "Bringup and Tools")
-    
-    # 2. BU* work items section (grouped and sorted together)
-    if bu_items:
-        print(f"\nCreating slides for BU Work Items ({len(bu_items)} items)...")
-        create_slides_for_group(bu_items, "BU Work Items")
-    
-    # 3. Updates (in progress items)
+
+    # 2. VS* Updates (in progress items) — comes before Bugs and Fixes
     if other_items:
         print(f"\nCreating slides for Updates ({len(other_items)} items)...")
         create_slides_for_group(other_items, "Updates")
-    
-    # 4. Bugs and Fixes section
+
+    # 3. Bugs and Fixes (non-BU bugs first, then BU* cases grouped at end)
     if bug_items:
-        print(f"\nCreating slides for Bugs and Fixes ({len(bug_items)} items)...")
+        bu_count = len(bu_items)
+        print(f"\nCreating slides for Bugs and Fixes ({len(bug_items)} items, {bu_count} BU* cases at end)...")
         create_slides_for_group(bug_items, "Bugs and Fixes")
-    
-    # 5. Blocked/On Hold section
+
+    # 4. Blocked/On Hold section
     if blocked_items:
         print(f"\nCreating slides for Blocked/On Hold ({len(blocked_items)} items)...")
         create_slides_for_group(blocked_items, "Blocked / On Hold")
-    
-    # 6. CI Failures section
+
+    # 5. CI Failures section
     if ci_failure_items:
         print(f"\nCreating slides for CI Failures ({len(ci_failure_items)} items)...")
         create_slides_for_group(ci_failure_items, "CI Failures")
-    
-    # 7. Done items (at the end)
+
+    # 6. Done items (at the end)
     if done_items:
         print(f"\nCreating slides for Done items ({len(done_items)} items)...")
         create_slides_for_group(done_items, "Done")
