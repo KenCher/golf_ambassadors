@@ -19,23 +19,25 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Use explicit Python path so launchd finds the right version (not /usr/bin/python3)
+PYTHON=/opt/homebrew/bin/python3
+
 # Check Python 3
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 is not installed."
-    echo "   macOS: brew install python3"
-    echo "   Linux: sudo apt-get install python3"
+if ! command -v "$PYTHON" &> /dev/null; then
+    echo "❌ Python 3 not found at $PYTHON"
+    echo "   Try: brew install python3"
     exit 1
 fi
 
-echo "✅ Python: $(python3 --version)"
+echo "✅ Python: $($PYTHON --version)"
 echo ""
 
 # Check required package
-python3 -c "import requests" 2>/dev/null
+$PYTHON -c "import requests" 2>/dev/null
 if [ $? -ne 0 ]; then
     echo "⚠️  Missing package: requests — installing..."
     pip3 install --user requests 2>/dev/null || pip3 install --break-system-packages requests 2>/dev/null
-    python3 -c "import requests" 2>/dev/null
+    $PYTHON -c "import requests" 2>/dev/null
     if [ $? -ne 0 ]; then
         echo "❌ Could not install 'requests'. Run: pip3 install requests"
         exit 1
@@ -49,7 +51,7 @@ EXTRA_ARGS="$@"
 
 echo "Running agent..."
 echo ""
-python3 monday_weekly_column_agent.py $EXTRA_ARGS
+$PYTHON monday_weekly_column_agent.py $EXTRA_ARGS
 
 EXIT_CODE=$?
 

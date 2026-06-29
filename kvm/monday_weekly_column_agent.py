@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/opt/homebrew/bin/python3
 """
 Monday.com Weekly Column Agent
 Automatically adds a new "Updates MM/DD" text column to the board every Monday.
@@ -36,7 +36,7 @@ COLUMN_TITLE_PREFIX = "Updates"
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def gql(query: str, variables: dict | None = None) -> dict:
+def gql(query: str, variables=None) -> dict:
     """Execute a GraphQL request against the Monday API."""
     payload = {"query": query}
     if variables:
@@ -71,7 +71,7 @@ def column_exists(columns: list[dict], title: str) -> bool:
     return any(col["title"] == title for col in columns)
 
 
-def create_text_column(title: str) -> dict:
+def create_text_column(title) -> dict:
     """Create a new long-text column with the given title. Returns the new column."""
     mutation = """
     mutation ($boardId: ID!, $title: String!, $columnType: ColumnType!) {
@@ -95,7 +95,7 @@ def create_text_column(title: str) -> dict:
     return data["create_column"]
 
 
-def target_monday(override_date: str | None) -> datetime:
+def target_monday(override_date=None) -> datetime:
     """
     Return the datetime for the Monday this column should represent.
     - If --date MM/DD supplied, parse it.
