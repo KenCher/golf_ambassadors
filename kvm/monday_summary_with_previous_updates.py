@@ -568,7 +568,21 @@ def create_presentation_with_previous_updates(board_data):
     # Append BU* items after other bug items so they are grouped at the end of Bugs and Fixes
     bug_items = bug_items + bu_items
 
-    print(f"\nCategorization:")
+    # Sort each category by owner so the same person's items appear together on slides
+    def owner_sort_key(item):
+        return get_owner(item).lower()
+
+    bringup_items.sort(key=owner_sort_key)
+    other_items.sort(key=owner_sort_key)
+    blocked_items.sort(key=owner_sort_key)
+    done_items.sort(key=owner_sort_key)
+    ci_failure_items.sort(key=owner_sort_key)
+    # bug_items: keep non-BU bugs sorted by owner, BU* stay sorted numerically at the end
+    non_bu_bugs = bug_items[:len(bug_items) - len(bu_items)]
+    non_bu_bugs.sort(key=owner_sort_key)
+    bug_items = non_bu_bugs + bu_items
+
+    print(f"\nCategorization (items grouped by owner within each section):")
     print(f"  Bringup and tools: {len(bringup_items)} items")
     print(f"  Bugs and Fixes:    {len(bug_items)} items  (incl. {len(bu_items)} BU* cases)")
     print(f"  Blocked/On Hold:   {len(blocked_items)} items")
