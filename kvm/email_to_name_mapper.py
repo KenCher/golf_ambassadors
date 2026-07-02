@@ -27,6 +27,7 @@ EMAIL_TO_NAME = {
     "Konstantin.Shkolnyy@ibm.com": "Konstantin Shkolnyy",
     "Collin.Walling@ibm.com": "Collin Walling",
     "mjwebber@us.ibm.com": "Matthew J Webber",
+    "hanli11@ibm.com": "Han Li",
     "Farhan.Ali4@ibm.com": "Farhan Ali"
 }
 

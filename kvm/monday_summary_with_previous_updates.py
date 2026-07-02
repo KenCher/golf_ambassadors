@@ -21,10 +21,12 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from email_to_name_mapper import convert_email_to_name
 from monday_summary_ai_analysis import parse_update_into_bullets, format_categorized_bullets
+from get_monday_status import format_status_for_pptx
 
 # Path to previous presentation for importing item text
 PREVIOUS_PPTX_PATH = os.path.join(os.path.dirname(__file__), "KVM Status Only.pptx")
 PREVIOUS_NOTES_JSON = os.path.join(os.path.dirname(__file__), "extracted_item_text.json")
+TEMPLATE_PPTX_PATH  = os.path.join(os.path.dirname(__file__), "USKVM.pptx")
 
 # Monday.com API configuration
 API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYyOTQxMTE0NywiYWFpIjoxMSwidWlkIjo1MDkyMjk2MSwiaWFkIjoiMjAyNi0wMy0wNVQxNjoxNzozOC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.swejQV61Cb4d7VEFTww2nBDnpUt19U05NTHbb9lpg9g"
@@ -434,10 +436,25 @@ def extract_notes(item):
 
 def create_presentation_with_previous_updates(board_data):
     """Create PowerPoint with Previous Updates and Current Updates columns across multiple slides"""
-    prs = Presentation()
-    # Set to 16:9 widescreen format (standard for modern displays)
-    prs.slide_width = Inches(13.333)  # 16:9 aspect ratio
-    prs.slide_height = Inches(7.5)
+    # Load from template so the title slide background/branding is preserved
+    if os.path.exists(TEMPLATE_PPTX_PATH):
+        prs = Presentation(TEMPLATE_PPTX_PATH)
+        print(f"✅ Loaded template: {TEMPLATE_PPTX_PATH}")
+        # Update the date text on the title slide (TextBox 2 = date field)
+        title_slide = prs.slides[0]
+        for shape in title_slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    for run in para.runs:
+                        # Replace the date run — it looks like "June 30, 2026"
+                        import re as _re
+                        if _re.search(r'\d{4}', run.text):
+                            run.text = datetime.now().strftime('%B %d, %Y')
+    else:
+        print(f"⚠️  Template not found at {TEMPLATE_PPTX_PATH} — using blank presentation")
+        prs = Presentation()
+        prs.slide_width = Inches(13.333)
+        prs.slide_height = Inches(7.5)
     
     items = board_data.get("items_page", {}).get("items", [])
     
@@ -513,15 +530,7 @@ def create_presentation_with_previous_updates(board_data):
     print(f"Total items to display: {len(all_items_to_show)}")
     print(f"Previous date: {previous_date}, Current date: {current_date}")
     
-    # Title slide
-    title_slide_layout = prs.slide_layouts[0]
-    slide = prs.slides.add_slide(title_slide_layout)
-    title = slide.shapes.title
-    subtitle = slide.placeholders[1]
-    
-    title.text = "US KVM & Linux Status"
-    subtitle.text = f"{datetime.now().strftime('%B %d, %Y')}\nBy Kennedy Cheruiyot"
-    
+    # Title slide already present from template (index 0)
     # Categorize items - separate bringup/tools, bugs/fixes (incl. BU* cases), blocked/on hold, done, CI failures, and other items
     bringup_items = []
     bug_items = []      # Includes BU* bug cases (grouped together at the end of this section)
@@ -599,7 +608,11 @@ def create_presentation_with_previous_updates(board_data):
             end_idx = min(start_idx + items_per_slide, total_items)
             slide_items = items_list[start_idx:end_idx]
             
-            blank_slide_layout = prs.slide_layouts[6]
+            # Use Blank layout (index 6 in default, last in template master)
+            blank_slide_layout = next(
+                (l for l in prs.slide_layouts if l.name == "Blank"),
+                prs.slide_layouts[6]
+            )
             slide = prs.slides.add_slide(blank_slide_layout)
             
             # Add title only for specific sections (not for "Updates")
@@ -832,75 +845,36 @@ def create_presentation_with_previous_updates(board_data):
                     # Check if date is different from column header
                     date_is_different = previous_date and previous_update_date != previous_date
                     
-                    # Parse and format with AI
-                    categorized = parse_update_into_bullets(previous_update)
-                    formatted = format_categorized_bullets(categorized, use_emojis=False, max_items_per_category=5, max_chars_per_item=500)
-                    
-                    lines = formatted.strip().split('\n')
-                    for idx, line in enumerate(lines):
-                        if idx == 0:
-                            p = text_frame.paragraphs[0]
-                            if date_is_different:
-                                # Add prominent date prefix with warning styling
-                                p.text = f"⚠️ DATE: {previous_update_date} ⚠️\n"
-                                p.font.size = Pt(9)  # Slightly larger
-                                p.font.name = 'Calibri'
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(255, 0, 0)  # Red for high visibility
-                                p.alignment = PP_ALIGN.LEFT
-                                # Add the rest of the line in a new run
-                                run = p.add_run()
-                                run.text = line
-                                run.font.size = Pt(8)
-                                run.font.name = 'Calibri'
-                                # Color the section header (dimmed for previous updates)
-                                if line.startswith('COMPLETED LAST WEEK'):
-                                    run.font.bold = True
-                                    run.font.color.rgb = RGBColor(100, 150, 100)  # Dimmed green
-                                elif line.startswith('CURRENTLY WORKING ON'):
-                                    run.font.bold = True
-                                    run.font.color.rgb = RGBColor(100, 140, 180)  # Dimmed blue
-                                elif line.startswith('BLOCKERS'):
-                                    run.font.bold = True
-                                    run.font.color.rgb = RGBColor(180, 100, 100)  # Dimmed red
-                                else:
-                                    run.font.color.rgb = RGBColor(128, 128, 128)  # Gray for regular text
-                            else:
-                                p.text = line
-                                p.font.size = Pt(8)
-                                p.font.name = 'Calibri'
-                                p.alignment = PP_ALIGN.LEFT
-                                # Color the section headers (dimmed for previous updates)
-                                if line.startswith('COMPLETED LAST WEEK'):
-                                    p.font.bold = True
-                                    p.font.color.rgb = RGBColor(100, 150, 100)  # Dimmed green
-                                elif line.startswith('CURRENTLY WORKING ON'):
-                                    p.font.bold = True
-                                    p.font.color.rgb = RGBColor(100, 140, 180)  # Dimmed blue
-                                elif line.startswith('BLOCKERS'):
-                                    p.font.bold = True
-                                    p.font.color.rgb = RGBColor(180, 100, 100)  # Dimmed red
-                                else:
-                                    p.font.color.rgb = RGBColor(128, 128, 128)  # Gray for regular text
+                    # Parse and render using shared formatter
+                    pptx_lines = format_status_for_pptx(previous_update)
+                    if date_is_different:
+                        warn_p = text_frame.paragraphs[0]
+                        warn_p.text = f"⚠️ DATE: {previous_update_date} ⚠️"
+                        warn_p.font.size = Pt(9)
+                        warn_p.font.bold = True
+                        warn_p.font.color.rgb = RGBColor(255, 0, 0)
+                        warn_p.font.name = 'Calibri'
+                        warn_p.alignment = PP_ALIGN.LEFT
+                        first_p = text_frame.add_paragraph()
+                    else:
+                        first_p = text_frame.paragraphs[0]
+                    for seg_idx, (line_text, kind) in enumerate(pptx_lines):
+                        p = first_p if seg_idx == 0 else text_frame.add_paragraph()
+                        p.text = line_text
+                        p.font.size = Pt(8)
+                        p.font.name = 'Calibri'
+                        p.alignment = PP_ALIGN.LEFT
+                        if kind == 'completed':
+                            p.font.bold = True
+                            p.font.color.rgb = RGBColor(100, 150, 100)  # dimmed green
+                        elif kind == 'current':
+                            p.font.bold = True
+                            p.font.color.rgb = RGBColor(100, 140, 180)  # dimmed blue
+                        elif kind == 'blockers':
+                            p.font.bold = True
+                            p.font.color.rgb = RGBColor(180, 100, 100)  # dimmed red
                         else:
-                            p = text_frame.add_paragraph()
-                            p.text = line
-                            p.font.size = Pt(8)
-                            p.font.name = 'Calibri'
-                            p.alignment = PP_ALIGN.LEFT
-                            
-                            # Color the section headers (dimmed for previous updates)
-                            if line.startswith('COMPLETED LAST WEEK'):
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(100, 150, 100)  # Dimmed green
-                            elif line.startswith('CURRENTLY WORKING ON'):
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(100, 140, 180)  # Dimmed blue
-                            elif line.startswith('BLOCKERS'):
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(180, 100, 100)  # Dimmed red
-                            else:
-                                p.font.color.rgb = RGBColor(128, 128, 128)  # Gray for regular text
+                            p.font.color.rgb = RGBColor(128, 128, 128)  # grey body
                 else:
                     p = text_frame.paragraphs[0]
                     p.text = "No previous updates"
@@ -920,69 +894,36 @@ def create_presentation_with_previous_updates(board_data):
                     # Check if date is different from column header
                     date_is_different = current_date and current_update_date != current_date
                     
-                    # Parse and format with AI
-                    categorized = parse_update_into_bullets(current_update)
-                    formatted = format_categorized_bullets(categorized, use_emojis=False, max_items_per_category=5, max_chars_per_item=500)
-                    
-                    lines = formatted.strip().split('\n')
-                    for idx, line in enumerate(lines):
-                        if idx == 0:
-                            p = text_frame.paragraphs[0]
-                            if date_is_different:
-                                # Add prominent date prefix with warning styling
-                                p.text = f"⚠️ DATE: {current_update_date} ⚠️\n"
-                                p.font.size = Pt(9)  # Slightly larger
-                                p.font.name = 'Calibri'
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(255, 0, 0)  # Red for high visibility
-                                p.alignment = PP_ALIGN.LEFT
-                                # Add the rest of the line in a new run
-                                run = p.add_run()
-                                run.text = line
-                                run.font.size = Pt(8)
-                                run.font.name = 'Calibri'
-                                # Color the section header
-                                if line.startswith('COMPLETED LAST WEEK'):
-                                    run.font.bold = True
-                                    run.font.color.rgb = RGBColor(0, 128, 0)
-                                elif line.startswith('CURRENTLY WORKING ON'):
-                                    run.font.bold = True
-                                    run.font.color.rgb = RGBColor(0, 112, 192)
-                                elif line.startswith('BLOCKERS'):
-                                    run.font.bold = True
-                                    run.font.color.rgb = RGBColor(192, 0, 0)
-                            else:
-                                p.text = line
-                                p.font.size = Pt(8)
-                                p.font.name = 'Calibri'
-                                p.alignment = PP_ALIGN.LEFT
-                                # Color the section headers
-                                if line.startswith('COMPLETED LAST WEEK'):
-                                    p.font.bold = True
-                                    p.font.color.rgb = RGBColor(0, 128, 0)
-                                elif line.startswith('CURRENTLY WORKING ON'):
-                                    p.font.bold = True
-                                    p.font.color.rgb = RGBColor(0, 112, 192)
-                                elif line.startswith('BLOCKERS'):
-                                    p.font.bold = True
-                                    p.font.color.rgb = RGBColor(192, 0, 0)
+                    # Parse and render using shared formatter
+                    pptx_lines = format_status_for_pptx(current_update)
+                    if date_is_different:
+                        warn_p = text_frame.paragraphs[0]
+                        warn_p.text = f"⚠️ DATE: {current_update_date} ⚠️"
+                        warn_p.font.size = Pt(9)
+                        warn_p.font.bold = True
+                        warn_p.font.color.rgb = RGBColor(255, 0, 0)
+                        warn_p.font.name = 'Calibri'
+                        warn_p.alignment = PP_ALIGN.LEFT
+                        first_p = text_frame.add_paragraph()
+                    else:
+                        first_p = text_frame.paragraphs[0]
+                    for seg_idx, (line_text, kind) in enumerate(pptx_lines):
+                        p = first_p if seg_idx == 0 else text_frame.add_paragraph()
+                        p.text = line_text
+                        p.font.size = Pt(8)
+                        p.font.name = 'Calibri'
+                        p.alignment = PP_ALIGN.LEFT
+                        if kind == 'completed':
+                            p.font.bold = True
+                            p.font.color.rgb = RGBColor(0, 128, 0)    # green
+                        elif kind == 'current':
+                            p.font.bold = True
+                            p.font.color.rgb = RGBColor(0, 112, 192)  # blue
+                        elif kind == 'blockers':
+                            p.font.bold = True
+                            p.font.color.rgb = RGBColor(192, 0, 0)    # red
                         else:
-                            p = text_frame.add_paragraph()
-                            p.text = line
-                            p.font.size = Pt(8)
-                            p.font.name = 'Calibri'
-                            p.alignment = PP_ALIGN.LEFT
-                            
-                            # Color the section headers
-                            if line.startswith('COMPLETED LAST WEEK'):
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(0, 128, 0)
-                            elif line.startswith('CURRENTLY WORKING ON'):
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(0, 112, 192)
-                            elif line.startswith('BLOCKERS'):
-                                p.font.bold = True
-                                p.font.color.rgb = RGBColor(192, 0, 0)
+                            pass  # default colour
                 else:
                     p = text_frame.paragraphs[0]
                     p.text = "No updates"

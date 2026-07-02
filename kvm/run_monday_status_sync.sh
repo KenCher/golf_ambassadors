@@ -53,6 +53,17 @@ echo "   • monday_status.json         - JSON data export"
 echo "   • monday_status_report.html  - Interactive HTML report"
 echo ""
 
+# Open HTML report
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    read -p "🌐 Open HTML report now? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        open monday_status_report.html
+        echo "✅ Opened monday_status_report.html"
+    fi
+fi
+echo ""
+
 # Step 2: Generate PowerPoint with BU* items grouped
 echo "📊 Generating PowerPoint with BU work items grouped..."
 echo "   Slide sections:"
