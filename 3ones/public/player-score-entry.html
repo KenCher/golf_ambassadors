@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Ambassadors - Player Score Entry</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #1e293b;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            font-weight: 800;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        
+        .login-section {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            padding: 30px;
+            border-radius: 16px;
+            border: 3px solid #3b82f6;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+        }
+        
+        .login-section h2 {
+            font-family: 'Playfair Display', serif;
+            color: #1e40af;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            color: #1e40af;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 3px solid #3b82f6;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 12px;
+            font-size: 1.3em;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .scorecard-section {
+            display: none;
+        }
+        
+        .scorecard-section.active {
+            display: block;
+        }
+        
+        .player-info {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border-left: 5px solid #10b981;
+        }
+        
+        .player-info h3 {
+            font-family: 'Playfair Display', serif;
+            color: #065f46;
+            font-size: 1.6em;
+            margin-bottom: 10px;
+        }
+        
+        .player-info p {
+            color: #047857;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        
+        .hole-entry {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+        
+        .hole-entry:hover {
+            border-color: #10b981;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        }
+        
+        .hole-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .hole-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #059669;
+        }
+        
+        .hole-par {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            color: #1e40af;
+            font-size: 1.1em;
+        }
+        
+        .score-input-group {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .score-input {
+            padding: 14px;
+            border: 3px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1.4em;
+            font-weight: 700;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .score-input:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+        
+        .two-club-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fef3c7;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 2px solid #f59e0b;
+        }
+        
+        .two-club-checkbox input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: #f59e0b;
+        }
+        
+        .two-club-checkbox label {
+            font-weight: 600;
+            color: #92400e;
+            cursor: pointer;
+            font-size: 1.05em;
+        }
+        
+        .certification-section {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 30px;
+            border-radius: 16px;
+            border: 3px solid #f59e0b;
+            margin-top: 30px;
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2);
+        }
+        
+        .certification-section h3 {
+            font-family: 'Playfair Display', serif;
+            color: #92400e;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .certification-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+        }
+        
+        .certification-checkbox input[type="checkbox"] {
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            accent-color: #f59e0b;
+            margin-top: 3px;
+        }
+        
+        .certification-checkbox label {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #92400e;
+            cursor: pointer;
+            line-height: 1.6;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 6px 16px rgba(245, 158, 11, 0.3);
+        }
+        
+        .submit-btn:hover {
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+        }
+        
+        .success-message {
+            display: none;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            padding: 30px;
+            border-radius: 16px;
+            border: 3px solid #10b981;
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .success-message.active {
+            display: block;
+        }
+        
+        .success-message h2 {
+            font-family: 'Playfair Display', serif;
+            color: #065f46;
+            font-size: 2.2em;
+            margin-bottom: 15px;
+        }
+        
+        .success-message p {
+            color: #047857;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .card { padding: 25px; }
+            h1 { font-size: 2.2em; }
+            .score-input-group { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>⛳ Player Score Entry</h1>
+            <p class="subtitle">Enter Your Round & Certify Your Scores</p>
+            
+            <!-- Login Section -->
+            <div class="login-section" id="login-section">
+                <h2>🏌️ Select Your Name</h2>
+                <div class="form-group">
+                    <label for="player-select">Your Name:</label>
+                    <select id="player-select">
+                        <option value="">-- Select Your Name --</option>
+                    </select>
+                </div>
+                <button class="btn" onclick="startScoreEntry()">Start Score Entry</button>
+            </div>
+            
+            <!-- Scorecard Section -->
+            <div class="scorecard-section" id="scorecard-section">
+                <div class="player-info">
+                    <h3>Welcome, <span id="player-name-display"></span>!</h3>
+                    <p>Handicap: <span id="player-handicap-display"></span> | Course: <span id="course-name-display"></span></p>
+                </div>
+                
+                <div id="holes-container"></div>
+                
+                <!-- Certification -->
+                <div class="certification-section">
+                    <h3>📋 Score Certification</h3>
+                    <div class="certification-checkbox">
+                        <input type="checkbox" id="certify-accuracy" required>
+                        <label for="certify-accuracy">
+                            I certify that all scores entered above are accurate and reflect my actual performance during this round of golf.
+                        </label>
+                    </div>
+                    <div class="certification-checkbox">
+                        <input type="checkbox" id="certify-rules" required>
+                        <label for="certify-rules">
+                            I confirm that I played according to the rules of golf and the competition guidelines.
+                        </label>
+                    </div>
+                    <button class="btn submit-btn" onclick="submitScores()" id="submit-btn" disabled>
+                        🏆 Submit & Certify Scores
+                    </button>
+                </div>
+                
+                <div class="success-message" id="success-message">
+                    <h2>✅ Scores Submitted Successfully!</h2>
+                    <p>Your scores have been certified and saved. Thank you for participating!</p>
+                    <button class="btn" onclick="location.reload()" style="margin-top: 20px; max-width: 300px; margin-left: auto; margin-right: auto;">
+                        Enter Another Round
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDAg-PMUqJxembdfLugDX_NGVDfHsktYHg",
+            authDomain: "golf-ambassadors.firebaseapp.com",
+            projectId: "golf-ambassadors",
+            storageBucket: "golf-ambassadors.firebasestorage.app",
+            messagingSenderId: "191082071768",
+            appId: "1:191082071768:web:815e488ccb141683f5f9ad"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const sharedDocRef = doc(db, 'sharedState', 'golfAmbassadors');
+
+        let currentPlayer = null;
+        let course = null;
+        let scores = {};
+        let twoClubAchievements = {};
+        let currentData = null;
+
+        function getDefaultData() {
+            return {
+                competitionName: 'Golf Ambassadors Competition',
+                course: { name: 'Unknown Course', holes: [] },
+                players: [],
+                scores: {},
+                twoClubAchievements: {},
+                currentPlayerId: null,
+                entryFee: 20
+            };
+        }
+
+        function mergeWithDefaults(data) {
+            const base = getDefaultData();
+            return {
+                ...base,
+                ...(data || {}),
+                course: data?.course || base.course,
+                players: Array.isArray(data?.players) ? data.players : [],
+                scores: data?.scores || {},
+                twoClubAchievements: data?.twoClubAchievements || {}
+            };
+        }
+
+        function populatePlayers(players) {
+            const select = document.getElementById('player-select');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">-- Select Your Name --</option>';
+
+            players.filter(p => p.participating).forEach(player => {
+                const option = document.createElement('option');
+                option.value = player.id;
+                option.textContent = `${player.name} (HCP: ${player.handicap})`;
+                select.appendChild(option);
+            });
+
+            if (currentValue && players.some(p => p.id === currentValue && p.participating)) {
+                select.value = currentValue;
+            }
+        }
+
+        async function loadSharedData() {
+            try {
+                const snapshot = await getDoc(sharedDocRef);
+                if (snapshot.exists()) {
+                    currentData = mergeWithDefaults(snapshot.data());
+                    localStorage.setItem('golfAmbassadors', JSON.stringify(currentData));
+                    return currentData;
+                }
+            } catch (error) {
+                console.error('Firebase load failed, falling back to localStorage:', error);
+            }
+
+            const saved = localStorage.getItem('golfAmbassadors');
+            currentData = mergeWithDefaults(saved ? JSON.parse(saved) : null);
+            return currentData;
+        }
+
+        async function saveSharedData(data) {
+            const normalized = mergeWithDefaults(data);
+            currentData = normalized;
+            localStorage.setItem('golfAmbassadors', JSON.stringify(normalized));
+
+            await setDoc(sharedDocRef, {
+                ...normalized,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        }
+
+        async function loadData() {
+            const data = await loadSharedData();
+            course = data.course || { name: 'Unknown Course', holes: [] };
+            populatePlayers(data.players || []);
+        }
+
+        async function startScoreEntry() {
+            const playerId = document.getElementById('player-select').value;
+            if (!playerId) {
+                alert('Please select your name');
+                return;
+            }
+
+            const data = await loadSharedData();
+            currentPlayer = (data.players || []).find(p => p.id === playerId);
+
+            if (!currentPlayer) {
+                alert('Player not found');
+                return;
+            }
+
+            course = data.course || { name: 'Unknown Course', holes: [] };
+            scores = data.scores?.[playerId] || [];
+            twoClubAchievements = data.twoClubAchievements?.[playerId] || [];
+
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('scorecard-section').classList.add('active');
+            document.getElementById('player-name-display').textContent = currentPlayer.name;
+            document.getElementById('player-handicap-display').textContent = currentPlayer.handicap;
+            document.getElementById('course-name-display').textContent = course.name;
+
+            generateHoleEntries();
+            checkFormCompletion();
+        }
+
+        function generateHoleEntries() {
+            const container = document.getElementById('holes-container');
+            container.innerHTML = '';
+
+            course.holes.forEach((hole, index) => {
+                const holeDiv = document.createElement('div');
+                holeDiv.className = 'hole-entry';
+                holeDiv.innerHTML = `
+                    <div class="hole-header">
+                        <div class="hole-number">Hole ${hole.number}</div>
+                        <div class="hole-par">Par ${hole.par}</div>
+                    </div>
+                    <div class="score-input-group">
+                        <input type="number"
+                               class="score-input"
+                               id="score-${index}"
+                               placeholder="Enter score"
+                               min="1"
+                               max="15"
+                               value="${scores[index] || ''}"
+                               onchange="updateScore(${index})">
+                        ${hole.par === 3 ? `
+                            <div class="two-club-checkbox">
+                                <input type="checkbox"
+                                       id="twoclub-${index}"
+                                       ${twoClubAchievements[index] ? 'checked' : ''}
+                                       onchange="updateTwoClub(${index})">
+                                <label for="twoclub-${index}">2-Club 🏆</label>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                container.appendChild(holeDiv);
+            });
+        }
+
+        window.updateScore = function(index) {
+            const value = parseInt(document.getElementById(`score-${index}`).value, 10);
+            scores[index] = value && value > 0 ? value : null;
+            checkFormCompletion();
+        };
+
+        window.updateTwoClub = function(index) {
+            twoClubAchievements[index] = document.getElementById(`twoclub-${index}`).checked;
+        };
+
+        function checkFormCompletion() {
+            const allScoresEntered = course.holes.every((hole, index) => scores[index] > 0);
+            const cert1 = document.getElementById('certify-accuracy').checked;
+            const cert2 = document.getElementById('certify-rules').checked;
+            document.getElementById('submit-btn').disabled = !(allScoresEntered && cert1 && cert2);
+        }
+
+        async function submitScores() {
+            if (!currentPlayer) return;
+
+            try {
+                const data = await loadSharedData();
+                data.scores[currentPlayer.id] = scores;
+                data.twoClubAchievements[currentPlayer.id] = twoClubAchievements;
+                await saveSharedData(data);
+
+                document.getElementById('scorecard-section').style.display = 'none';
+                document.getElementById('success-message').classList.add('active');
+            } catch (error) {
+                console.error('Failed to sync scores:', error);
+                alert('Failed to sync scores to Firebase. Please try again.');
+            }
+        }
+
+        window.startScoreEntry = startScoreEntry;
+        window.submitScores = submitScores;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            document.getElementById('certify-accuracy').addEventListener('change', checkFormCompletion);
+            document.getElementById('certify-rules').addEventListener('change', checkFormCompletion);
+            await loadData();
+        });
+    </script>
+</body>
+</html>

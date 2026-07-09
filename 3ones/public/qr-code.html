@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf4us - QR Code Access</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            background: white;
+            color: #333;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 600px;
+        }
+        
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            display: inline-block;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .qr-code {
+            width: 300px;
+            height: 300px;
+            border: 3px solid #1e3c72;
+            border-radius: 10px;
+        }
+        
+        .instructions {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .instructions h3 {
+            color: #1e3c72;
+            margin-top: 0;
+        }
+        
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .url-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.9em;
+            border-left: 4px solid #1e3c72;
+        }
+        
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            color: #155724;
+        }
+        
+        .button {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .button:hover {
+            background: #2a5298;
+        }
+        
+        .button-secondary {
+            background: #6c757d;
+        }
+        
+        .button-secondary:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⛳ Golf4us</h1>
+        <p class="subtitle">Scan QR Code to Access on Your Phone</p>
+        
+        <div class="qr-container">
+            <img id="qr-code" class="qr-code" alt="QR Code">
+        </div>
+        
+        <div class="url-box" id="url-display">
+            Loading...
+        </div>
+        
+        <div class="instructions">
+            <h3>📱 How to Use:</h3>
+            <ol>
+                <li><strong>Open Camera app</strong> on your Android phone</li>
+                <li><strong>Point at the QR code</strong> above</li>
+                <li><strong>Tap the notification</strong> that appears</li>
+                <li><strong>App will open</strong> in your browser!</li>
+            </ol>
+        </div>
+        
+        <div class="alert">
+            <strong>⚠️ Note:</strong> Make sure your phone is on the same WiFi network as this computer.
+            If the QR code doesn't work, use the file transfer method instead.
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <a href="mobile-enhanced.html" class="button">Open App on This Device</a>
+            <button onclick="window.print()" class="button button-secondary">Print QR Code</button>
+        </div>
+        
+        <div class="alert success" style="margin-top: 20px;">
+            <strong>✅ Alternative:</strong> Can't scan? Send the file <code>mobile-enhanced.html</code> 
+            via WhatsApp to your phone for offline access!
+        </div>
+    </div>
+    
+    <script>
+        // Get the current URL and generate QR code
+        const baseUrl = window.location.origin;
+        const appUrl = baseUrl + '/mobile-enhanced.html';
+        
+        // Display URL
+        document.getElementById('url-display').textContent = appUrl;
+        
+        // Generate QR code using Google Charts API
+        const qrCodeUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(appUrl)}&choe=UTF-8`;
+        document.getElementById('qr-code').src = qrCodeUrl;
+        
+        // Also try to get local IP addresses
+        fetch('/').then(() => {
+            const hostname = window.location.hostname;
+            if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                document.getElementById('url-display').innerHTML = `
+                    <div><strong>Primary URL:</strong> ${appUrl}</div>
+                    <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                        Try these URLs on your phone if the QR code doesn't work:<br>
+                        • http://9.57.45.224:8080/mobile-enhanced.html<br>
+                        • http://172.30.225.132:8080/mobile-enhanced.html
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

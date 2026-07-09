@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Ambassadors Links</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 30%),
+                radial-gradient(circle at top right, rgba(59, 130, 246, 0.18), transparent 28%),
+                linear-gradient(135deg, #0f172a 0%, #1e293b 52%, #334155 100%);
+            color: #0f172a;
+            padding: 18px;
+        }
+
+        .shell {
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.96) 100%);
+            border: 1px solid rgba(255,255,255,0.75);
+            border-radius: 28px;
+            padding: 28px 24px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+            overflow: hidden;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(15, 118, 110, 0.10);
+            color: #0f766e;
+            font-size: 0.84rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            line-height: 1.05;
+            color: #0f172a;
+        }
+
+        .headline-accent {
+            background: linear-gradient(135deg, #059669 0%, #10b981 55%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .intro {
+            margin: 0;
+            max-width: 760px;
+            color: #475569;
+            font-size: 1rem;
+            line-height: 1.65;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #dbeafe;
+            border-radius: 22px;
+            padding: 18px;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+        }
+
+        .card h2 {
+            margin: 0 0 10px;
+            font-size: 1.08rem;
+            color: #0f172a;
+        }
+
+        .card p {
+            margin: 0 0 14px;
+            color: #64748b;
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        .link-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-left: 4px solid #2563eb;
+            border-radius: 16px;
+            padding: 12px 13px;
+            font-size: 0.88rem;
+            color: #1e3a8a;
+            line-height: 1.5;
+            font-weight: 700;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        button {
+            border: none;
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            cursor: pointer;
+            color: #fff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.22);
+        }
+
+        .open-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+        }
+
+        .note {
+            margin-top: 20px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(236,253,245,0.95) 0%, rgba(239,246,255,0.95) 100%);
+            border: 1px solid #bbf7d0;
+            color: #14532d;
+        }
+
+        .note strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #166534;
+        }
+
+        .note p {
+            margin: 0;
+            color: #166534;
+            line-height: 1.6;
+            font-size: 0.92rem;
+        }
+
+        @media (max-width: 900px) {
+            body { padding: 12px; }
+            .hero { padding: 22px 16px; border-radius: 22px; }
+            .grid { grid-template-columns: 1fr; }
+            .card { padding: 16px; }
+        }
+
+        @media (max-width: 520px) {
+            .actions { flex-direction: column; }
+            button { width: 100%; }
+            .intro { font-size: 0.94rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <section class="hero">
+            <div class="eyebrow">⛳ Golf Ambassadors Utility Links</div>
+            <h1><span class="headline-accent">Clean Event Access</span> for Admin, Members, and Results</h1>
+            <p class="intro">
+                This page is a lightweight link utility for quickly opening the registration, admin scoring, and results pages.
+                It does not create events, store sample data, or modify local storage.
+            </p>
+
+            <div class="grid">
+                <article class="card">
+                    <h2>📱 Registration</h2>
+                    <p>Open the live registration page used by members to join available golf events.</p>
+                    <div class="link-box" id="reg-link-label">Live registration page</div>
+                    <div class="actions">
+                        <button class="copy-btn" type="button" onclick="copyLink('reg-link')">Copy Link</button>
+                        <button class="open-btn" type="button" onclick="openLink('reg-link')">Open Page</button>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <h2>🔧 Admin Scoring</h2>
+                    <p>Open the live admin portal for event setup, registration management, score entry, and payouts.</p>
+                    <div class="link-box" id="admin-link-label">Live admin portal</div>
+                    <div class="actions">
+                        <button class="copy-btn" type="button" onclick="copyLink('admin-link')">Copy Link</button>
+                        <button class="open-btn" type="button" onclick="openLink('admin-link')">Open Page</button>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <h2>🏆 Results</h2>
+                    <p>Open the live public results page to review scorecards, standings, and payout displays.</p>
+                    <div class="link-box" id="results-link-label">Live results page</div>
+                    <div class="actions">
+                        <button class="copy-btn" type="button" onclick="copyLink('results-link')">Copy Link</button>
+                        <button class="open-btn" type="button" onclick="openLink('results-link')">Open Page</button>
+                    </div>
+                </article>
+            </div>
+
+            <div class="note">
+                <strong>Clean and safe:</strong>
+                <p>This utility page links only to real live pages. It does not create preview events or save any sample event data.</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const currentPath = window.location.href;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+
+        const regLink = `${basePath}event-registration.html`;
+        const adminLink = `${basePath}event-registration-admin.html`;
+        const resultsLink = `${basePath}golf-ambassadors-results.html`;
+
+        const links = {
+            'reg-link': regLink,
+            'admin-link': adminLink,
+            'results-link': resultsLink
+        };
+
+        function copyLink(elementId) {
+            const text = links[elementId];
+            navigator.clipboard.writeText(text).then(() => {
+                alert(`Copied link:\n\n${text}`);
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    alert(`Copied link:\n\n${text}`);
+                } catch (error) {
+                    alert(`Copy manually:\n\n${text}`);
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+
+        function openLink(elementId) {
+            const link = links[elementId];
+            window.open(link, '_blank', 'noopener');
+        }
+    </script>
+</body>
+</html>

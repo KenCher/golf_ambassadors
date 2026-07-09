@@ -1,0 +1,3574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Golf4us GPS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-subtitle {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .gps-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            margin-top: 8px;
+            color: #4ade80;
+        }
+
+        .gps-status.inactive {
+            color: #f87171;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Course Selection Styles */
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .course-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .course-card:active {
+            transform: scale(0.98);
+        }
+
+        .course-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .course-card.closest {
+            border-color: #4ade80;
+        }
+
+        .course-name {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .course-location {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .course-details {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .course-distance {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-closest {
+            background: #4ade80;
+            color: #0f2027;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Tee Box Selection Styles */
+        .tee-box-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .tee-box-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+            position: relative;
+        }
+
+        .tee-box-card:active {
+            transform: scale(0.95);
+        }
+
+        .tee-box-card.selected {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.2);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+        }
+
+        .tee-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .tee-color.black {
+            background: #1f2937;
+            border-color: #9ca3af;
+        }
+
+        .tee-color.blue {
+            background: #3b82f6;
+        }
+
+        .tee-color.white {
+            background: #ffffff;
+        }
+
+        .tee-color.gold {
+            background: #fbbf24;
+        }
+
+        .tee-color.red {
+            background: #ef4444;
+        }
+
+        .tee-name {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .tee-yardage {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* GPS Interface Styles */
+        .distance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .distance-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .distance-value {
+            font-size: 4em;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .distance-unit {
+            font-size: 1.2em;
+            opacity: 0.8;
+        }
+
+        .direction-indicator {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+
+        .compass-arrow {
+            font-size: 2em;
+            transition: transform 0.3s ease;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .info-card-label {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-card-value {
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+
+        .hole-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hole-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .hole-number {
+            font-size: 2em;
+            font-weight: 800;
+        }
+
+        .hole-par {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .shot-tracker {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .shot-tracker-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+
+        .shot-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .shot-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateX(-5px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .change-course-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .change-course-btn:active {
+            transform: scale(0.95);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <a href="javascript:history.back()" class="back-button">
+        ← Back
+    </a>
+    
+    <div class="header">
+        <h1>⛳ Golf4us GPS</h1>
+        <div class="header-subtitle" id="headerSubtitle">Loading...</div>
+        <div class="gps-status" id="gpsStatus">
+            <span class="status-dot"></span>
+            <span id="statusText">Initializing...</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="screen active">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px;">Detecting your location...</p>
+            </div>
+        </div>
+
+        <!-- Course Selection Screen -->
+        <div id="courseSelectionScreen" class="screen">
+            <div class="info-box">
+                📍 Select the course you're playing today
+            </div>
+
+            <input 
+                type="text" 
+                id="searchBox" 
+                class="search-box" 
+                placeholder="🔍 Search courses..."
+            >
+
+            <div class="section">
+                <div class="section-title">📍 Nearby Courses</div>
+                <div id="courseList"></div>
+            </div>
+
+            <button class="btn btn-primary" id="startPlayingBtn" disabled>
+                Start Playing
+            </button>
+        </div>
+
+        <!-- Tee Box Selection Screen -->
+        <div id="teeBoxSelectionScreen" class="screen">
+            <div class="info-box">
+                🏌️ Select which tee boxes you're playing from
+            </div>
+
+            <div class="section">
+                <div class="section-title">Choose Your Tees</div>
+                <div class="tee-box-grid" id="teeBoxGrid">
+                    <!-- Tee boxes will be populated here -->
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="confirmTeeBoxBtn" disabled>
+                Next: Add Players
+            </button>
+        </div>
+
+        <!-- Player Management Screen -->
+        <div id="playerManagementScreen" class="screen">
+            <div class="info-box">
+                👥 Add players to your group (optional)
+            </div>
+
+            <div class="section">
+                <div class="section-title">Players</div>
+                <div id="playerList" style="margin-bottom: 15px;">
+                    <p style="opacity: 0.7; text-align: center;">No players added yet</p>
+                </div>
+                
+                <div style="display: grid; gap: 10px;">
+                    <input type="text" id="playerNameInput" placeholder="Player Name"
+                           style="padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 1em;">
+                    <input type="number" id="playerHandicapInput" placeholder="Handicap (optional)" step="0.1"
+                           style="padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 1em;">
+                    <button class="btn btn-secondary" onclick="addPlayer()">
+                        ➕ Add Player
+                    </button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="skipPlayers()" style="flex: 1;">
+                    Skip (Play Solo)
+                </button>
+                <button class="btn btn-primary" id="startPlayingBtn2" style="flex: 1;">
+                    Start Playing
+                </button>
+            </div>
+        </div>
+
+        <!-- GPS Tracking Screen -->
+        <div id="gpsTrackingScreen" class="screen">
+            <div class="distance-card">
+                <div class="distance-label">Distance to Green</div>
+                <div class="distance-value" id="distanceValue">---</div>
+                <div class="distance-unit">yards</div>
+                <div class="direction-indicator">
+                    <span class="compass-arrow" id="compassArrow">↑</span>
+                    <span id="compassDirection">N</span>
+                </div>
+            </div>
+
+            <div class="hole-info">
+                <div class="hole-header">
+                    <div class="hole-number">Hole <span id="holeNumber">1</span></div>
+                    <div class="hole-par">Par <span id="holePar">4</span></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <div style="font-size: 0.9em; opacity: 0.8;">
+                        <div><span id="courseName">Course Name</span></div>
+                        <div id="holeDetails" style="margin-top: 5px; font-size: 0.95em;">
+                            <span id="holeYardage">---</span> yards • SI <span id="strokeIndex">--</span>
+                        </div>
+                    </div>
+                    <button class="change-course-btn" onclick="changeCourse()" style="background: #ef4444; color: white; font-weight: 700; padding: 10px 20px; font-size: 1em;">
+                        ← Exit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hole Layout Visualization -->
+            <div class="section" style="margin-bottom: 20px;">
+                <div class="section-title" onclick="toggleHoleLayout()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🗺️ Hole Layout</span>
+                    <span id="layoutToggle">▼</span>
+                </div>
+                <div id="holeLayoutContainer" style="margin-top: 15px; display: block;">
+                    <svg id="holeLayoutSVG" width="100%" height="200" viewBox="0 0 300 200" style="background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%); border-radius: 10px;">
+                        <!-- Tee Box -->
+                        <rect id="teeBox" x="20" y="170" width="30" height="15" fill="#8B4513" stroke="#654321" stroke-width="2" rx="3"/>
+                        <text x="35" y="182" text-anchor="middle" fill="white" font-size="10" font-weight="bold">TEE</text>
+                        
+                        <!-- Fairway -->
+                        <path id="fairwayPath" d="M 35 170 Q 150 100 265 30" stroke="#228B22" stroke-width="60" fill="none" opacity="0.6"/>
+                        
+                        <!-- Green -->
+                        <circle id="greenCircle" cx="265" cy="30" r="25" fill="#90EE90" stroke="#228B22" stroke-width="3"/>
+                        <circle cx="265" cy="30" r="3" fill="#FFD700" stroke="#FFA500" stroke-width="1"/>
+                        <text x="265" y="50" text-anchor="middle" fill="#333" font-size="10" font-weight="bold">GREEN</text>
+                        
+                        <!-- Your Position -->
+                        <circle id="playerPosition" cx="35" cy="177" r="6" fill="#FF4444" stroke="white" stroke-width="2">
+                            <animate attributeName="r" values="6;8;6" dur="1.5s" repeatCount="indefinite"/>
+                        </circle>
+                        <text x="35" y="165" text-anchor="middle" fill="#FF4444" font-size="10" font-weight="bold">YOU</text>
+                        
+                        <!-- Distance Line -->
+                        <line id="distanceLine" x1="35" y1="177" x2="265" y2="30" stroke="#FF4444" stroke-width="2" stroke-dasharray="5,5" opacity="0.7"/>
+                    </svg>
+                    <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 0.85em; opacity: 0.9;">
+                        <div>🏌️ <span id="layoutTeeYards">---</span> yds from tee</div>
+                        <div>🎯 <span id="layoutGreenYards">---</span> yds to green</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-card-label">Accuracy</div>
+                    <div class="info-card-value" id="gpsAccuracy">---</div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-label">Score</div>
+                    <div class="info-card-value" id="holeScore">-</div>
+                </div>
+            </div>
+
+            <!-- Player Scores Section -->
+            <div class="section" id="playerScoresSection" style="margin-bottom: 20px; display: none;">
+                <div class="section-title">👥 Player Scores</div>
+                <div id="playerScoresList" style="margin-top: 15px;">
+                    <!-- Player scores will be populated here -->
+                </div>
+            </div>
+
+            <div class="section" style="margin-bottom: 20px;">
+                <div class="section-title">Enter Score</div>
+                <div id="currentPlayerName" style="font-size: 0.9em; opacity: 0.8; margin-bottom: 10px; display: none;">
+                    Scoring for: <span id="activePlayerName" style="font-weight: 700; color: #4ade80;"></span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-secondary btn-small" onclick="setScore(1)" style="padding: 15px 10px;">1</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(2)" style="padding: 15px 10px;">2</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(3)" style="padding: 15px 10px;">3</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(4)" style="padding: 15px 10px;">4</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(5)" style="padding: 15px 10px;">5</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(6)" style="padding: 15px 10px;">6</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(7)" style="padding: 15px 10px;">7</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(8)" style="padding: 15px 10px;">8</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(9)" style="padding: 15px 10px;">9</button>
+                    <button class="btn btn-secondary btn-small" onclick="setScore(10)" style="padding: 15px 10px;">10</button>
+                    <button class="btn btn-secondary btn-small" onclick="clearScore()" style="padding: 15px 10px; grid-column: span 4;">Clear</button>
+                </div>
+            </div>
+
+            <div class="shot-tracker">
+                <div class="shot-tracker-title">📍 Shot Tracker</div>
+                <div class="shot-list" id="shotList">
+                    <p style="opacity: 0.7; text-align: center;">No shots recorded yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav" id="bottomNav" style="display: none;">
+        <button class="btn btn-secondary" id="prevHoleBtn" style="flex: 0.8;" onclick="previousHole()">
+            ← Prev
+        </button>
+        <button class="btn btn-secondary" id="recordShotBtn" style="flex: 1;">
+            📍 Mark Shot
+        </button>
+        <button class="btn btn-secondary" onclick="showScorecard()" style="flex: 1;">
+            📊 Card
+        </button>
+        <button class="btn btn-primary" id="nextHoleBtn" style="flex: 1;">
+            Next Hole →
+        </button>
+    </div>
+
+    <!-- Scorecard/Leaderboard Modal -->
+    <div id="scorecardModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 1000; overflow-y: auto; padding: 20px;">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">📊 Scorecard & Leaderboard</h2>
+                <button onclick="hideScorecard()" style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 1em; cursor: pointer;">
+                    ✕ Close
+                </button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button id="scorecardTab" onclick="showTab('scorecard')" class="btn btn-primary" style="flex: 1; min-width: 120px;">
+                    📋 Scorecard
+                </button>
+                <button id="leaderboardTab" onclick="showTab('leaderboard')" class="btn btn-secondary" style="flex: 1; min-width: 120px;">
+                    🏆 Leaderboard
+                </button>
+                <button id="gamesTab" onclick="showTab('games')" class="btn btn-secondary" style="flex: 1; min-width: 120px;">
+                    🎮 Games
+                </button>
+            </div>
+
+            <!-- Scorecard View -->
+            <div id="scorecardView" style="display: block;">
+                <div id="scorecardContent" style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; overflow-x: auto;">
+                    <!-- Scorecard will be populated here -->
+                </div>
+            </div>
+
+            <!-- Leaderboard View -->
+            <div id="leaderboardView" style="display: none;">
+                <div id="leaderboardContent" style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
+                    <!-- Leaderboard will be populated here -->
+                </div>
+            </div>
+
+            <!-- Games View -->
+            <div id="gamesView" style="display: none;">
+                <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px;">
+                    <!-- Game Type Selection -->
+                    <div style="margin-bottom: 25px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: 700; font-size: 1.2em;">🎮 Select Game Format:</label>
+                        <select id="gameType" onchange="renderGame()" style="width: 100%; padding: 15px; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); font-size: 1.1em; font-weight: 600;">
+                            <option value="stableford">⭐ Stableford Points</option>
+                            <option value="modified-stableford">⭐⭐ Modified Stableford</option>
+                            <option value="skins-gross">💰 Skins (Gross)</option>
+                            <option value="skins-net">💰 Skins (Net)</option>
+                            <option value="nassau">🏆 Nassau (2-2-2)</option>
+                            <option value="match-play">⚔️ Match Play</option>
+                            <option value="best-ball">👥 Best Ball</option>
+                            <option value="scramble">🏃 Scramble</option>
+                            <option value="bingo-bango-bongo">🎯 Bingo Bango Bongo</option>
+                            <option value="wolf">🐺 Wolf</option>
+                            <option value="snake">🐍 Snake</option>
+                            <option value="vegas">🎰 Las Vegas</option>
+                        </select>
+                    </div>
+
+                    <!-- Game Settings -->
+                    <div id="gameSettings" style="margin-bottom: 25px;">
+                        <!-- Settings will be populated based on game type -->
+                    </div>
+
+                    <!-- Game Results -->
+                    <div id="gameContent">
+                        <!-- Game results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // OpenStreetMap API Integration
+        class OpenStreetMapAPI {
+            constructor() {
+                this.overpassAPI = 'https://overpass-api.de/api/interpreter';
+            }
+
+            async findNearbyGolfCourses(lat, lon, radiusKm = 10) {
+                try {
+                    const query = `
+                        [out:json][timeout:25];
+                        (
+                            node["leisure"="golf_course"](around:${radiusKm * 1000},${lat},${lon});
+                            way["leisure"="golf_course"](around:${radiusKm * 1000},${lat},${lon});
+                            relation["leisure"="golf_course"](around:${radiusKm * 1000},${lat},${lon});
+                        );
+                        out center tags;
+                    `;
+
+                    console.log('Fetching golf courses from OpenStreetMap...');
+                    const response = await fetch(this.overpassAPI, {
+                        method: 'POST',
+                        body: query,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+
+                    if (!response.ok) throw new Error('OSM API request failed');
+
+                    const data = await response.json();
+                    console.log('OSM Response:', data);
+                    return this.parseGolfCourses(data.elements, lat, lon);
+                } catch (error) {
+                    console.error('Error fetching from OSM:', error);
+                    return [];
+                }
+            }
+
+            parseGolfCourses(elements, userLat, userLon) {
+                const courses = [];
+
+                elements.forEach(element => {
+                    const tags = element.tags || {};
+                    let courseLat, courseLon;
+
+                    if (element.lat && element.lon) {
+                        courseLat = element.lat;
+                        courseLon = element.lon;
+                    } else if (element.center) {
+                        courseLat = element.center.lat;
+                        courseLon = element.center.lon;
+                    } else {
+                        return;
+                    }
+
+                    const course = {
+                        id: `osm-${element.id}`,
+                        name: tags.name || 'Unknown Golf Course',
+                        location: { lat: courseLat, lon: courseLon },
+                        city: tags['addr:city'] || tags.city || '',
+                        state: tags['addr:state'] || tags.state || '',
+                        holes: parseInt(tags.holes) || 18,
+                        par: parseInt(tags.par) || 72,
+                        phone: tags.phone || '',
+                        website: tags.website || '',
+                        source: 'OpenStreetMap',
+                        osmId: element.id,
+                        holeData: generateDefaultHoles(courseLat, courseLon, parseInt(tags.par) || 72)
+                    };
+
+                    course.distance = this.calculateDistance(userLat, userLon, courseLat, courseLon);
+                    courses.push(course);
+                });
+
+                return courses.sort((a, b) => a.distance - b.distance);
+            }
+
+            calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371;
+                const dLat = this.toRad(lat2 - lat1);
+                const dLon = this.toRad(lon2 - lon1);
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                          Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
+                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            toRad(degrees) {
+                return degrees * Math.PI / 180;
+            }
+        }
+
+        // Initialize OSM API
+        const osmAPI = new OpenStreetMapAPI();
+
+        // Tee box definitions
+        const teeBoxOptions = [
+            { id: 'black', name: 'Black Tees', color: 'black', rating: 75.2, slope: 140 },
+            { id: 'blue', name: 'Blue Tees', color: 'blue', rating: 73.5, slope: 135 },
+            { id: 'white', name: 'White Tees', color: 'white', rating: 71.2, slope: 128 },
+            { id: 'gold', name: 'Gold Tees', color: 'gold', rating: 68.8, slope: 120 },
+            { id: 'red', name: 'Red Tees', color: 'red', rating: 66.5, slope: 115 }
+        ];
+
+        // Load custom courses from Course Database Manager
+        function loadCustomCourses() {
+            const stored = localStorage.getItem('customCourses');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Fallback Course Database (used if OSM fails or no courses found)
+        // This will be merged with custom courses from the database manager
+        let fallbackCourses = [
+            {
+                id: 'salmon-creek',
+                name: 'Salmon Creek Country Club',
+                location: { lat: 43.1678, lon: -77.8156 },
+                city: 'Spencerport',
+                state: 'NY',
+                holes: 18,
+                par: 72,
+                teeBoxes: {
+                    white: { totalYards: 6010, rating: 70.5, slope: 125 },
+                    red: { totalYards: 5222, rating: 68.0, slope: 117 }
+                },
+                holeData: [
+                    { number: 1, par: 4, strokeIndex: 9, yardage: 309, teeBox: { lat: 43.1678, lon: -77.8156 }, green: { lat: 43.1682, lon: -77.8150 } },
+                    { number: 2, par: 5, strokeIndex: 15, yardage: 469, teeBox: { lat: 43.1683, lon: -77.8149 }, green: { lat: 43.1690, lon: -77.8142 } },
+                    { number: 3, par: 4, strokeIndex: 7, yardage: 395, teeBox: { lat: 43.1691, lon: -77.8141 }, green: { lat: 43.1697, lon: -77.8135 } },
+                    { number: 4, par: 3, strokeIndex: 13, yardage: 172, teeBox: { lat: 43.1698, lon: -77.8134 }, green: { lat: 43.1701, lon: -77.8131 } },
+                    { number: 5, par: 4, strokeIndex: 3, yardage: 410, teeBox: { lat: 43.1702, lon: -77.8130 }, green: { lat: 43.1708, lon: -77.8124 } },
+                    { number: 6, par: 4, strokeIndex: 17, yardage: 335, teeBox: { lat: 43.1709, lon: -77.8123 }, green: { lat: 43.1714, lon: -77.8118 } },
+                    { number: 7, par: 4, strokeIndex: 5, yardage: 386, teeBox: { lat: 43.1715, lon: -77.8117 }, green: { lat: 43.1721, lon: -77.8111 } },
+                    { number: 8, par: 4, strokeIndex: 11, yardage: 350, teeBox: { lat: 43.1722, lon: -77.8110 }, green: { lat: 43.1727, lon: -77.8105 } },
+                    { number: 9, par: 4, strokeIndex: 1, yardage: 420, teeBox: { lat: 43.1728, lon: -77.8104 }, green: { lat: 43.1734, lon: -77.8098 } },
+                    { number: 10, par: 3, strokeIndex: 18, yardage: 170, teeBox: { lat: 43.1735, lon: -77.8097 }, green: { lat: 43.1738, lon: -77.8094 } },
+                    { number: 11, par: 4, strokeIndex: 2, yardage: 407, teeBox: { lat: 43.1739, lon: -77.8093 }, green: { lat: 43.1745, lon: -77.8087 } },
+                    { number: 12, par: 5, strokeIndex: 4, yardage: 495, teeBox: { lat: 43.1746, lon: -77.8086 }, green: { lat: 43.1753, lon: -77.8079 } },
+                    { number: 13, par: 4, strokeIndex: 10, yardage: 280, teeBox: { lat: 43.1754, lon: -77.8078 }, green: { lat: 43.1758, lon: -77.8074 } },
+                    { number: 14, par: 5, strokeIndex: 8, yardage: 505, teeBox: { lat: 43.1759, lon: -77.8073 }, green: { lat: 43.1766, lon: -77.8066 } },
+                    { number: 15, par: 4, strokeIndex: 16, yardage: 285, teeBox: { lat: 43.1767, lon: -77.8065 }, green: { lat: 43.1771, lon: -77.8061 } },
+                    { number: 16, par: 3, strokeIndex: 14, yardage: 155, teeBox: { lat: 43.1772, lon: -77.8060 }, green: { lat: 43.1774, lon: -77.8057 } },
+                    { number: 17, par: 4, strokeIndex: 12, yardage: 285, teeBox: { lat: 43.1775, lon: -77.8056 }, green: { lat: 43.1779, lon: -77.8052 } },
+                    { number: 18, par: 4, strokeIndex: 6, yardage: 320, teeBox: { lat: 43.1780, lon: -77.8051 }, green: { lat: 43.1785, lon: -77.8046 } }
+                ],
+                source: 'Official Salmon Creek Scorecard'
+            },
+            {
+                id: 'buttonwood',
+                name: 'Buttonwood Creek Golf Course',
+                location: { lat: 43.1892, lon: -77.8234 },
+                city: 'Spencerport',
+                state: 'NY',
+                holes: 18,
+                par: 54,
+                teeBoxes: {
+                    white: { totalYards: 2274, rating: 54.0, slope: 95 }
+                },
+                holeData: [
+                    { number: 1, par: 3, strokeIndex: 7, yardage: 115, teeBox: { lat: 43.1892, lon: -77.8234 }, green: { lat: 43.1895, lon: -77.8230 } },
+                    { number: 2, par: 3, strokeIndex: 17, yardage: 96, teeBox: { lat: 43.1896, lon: -77.8229 }, green: { lat: 43.1898, lon: -77.8226 } },
+                    { number: 3, par: 3, strokeIndex: 5, yardage: 123, teeBox: { lat: 43.1899, lon: -77.8225 }, green: { lat: 43.1902, lon: -77.8221 } },
+                    { number: 4, par: 3, strokeIndex: 9, yardage: 117, teeBox: { lat: 43.1903, lon: -77.8220 }, green: { lat: 43.1906, lon: -77.8216 } },
+                    { number: 5, par: 3, strokeIndex: 15, yardage: 98, teeBox: { lat: 43.1907, lon: -77.8215 }, green: { lat: 43.1909, lon: -77.8212 } },
+                    { number: 6, par: 3, strokeIndex: 1, yardage: 140, teeBox: { lat: 43.1910, lon: -77.8211 }, green: { lat: 43.1913, lon: -77.8207 } },
+                    { number: 7, par: 3, strokeIndex: 3, yardage: 125, teeBox: { lat: 43.1914, lon: -77.8206 }, green: { lat: 43.1917, lon: -77.8202 } },
+                    { number: 8, par: 3, strokeIndex: 11, yardage: 133, teeBox: { lat: 43.1918, lon: -77.8201 }, green: { lat: 43.1921, lon: -77.8197 } },
+                    { number: 9, par: 3, strokeIndex: 13, yardage: 112, teeBox: { lat: 43.1922, lon: -77.8196 }, green: { lat: 43.1924, lon: -77.8193 } },
+                    { number: 10, par: 3, strokeIndex: 2, yardage: 160, teeBox: { lat: 43.1925, lon: -77.8192 }, green: { lat: 43.1928, lon: -77.8188 } },
+                    { number: 11, par: 3, strokeIndex: 6, yardage: 131, teeBox: { lat: 43.1929, lon: -77.8187 }, green: { lat: 43.1932, lon: -77.8183 } },
+                    { number: 12, par: 3, strokeIndex: 8, yardage: 127, teeBox: { lat: 43.1933, lon: -77.8182 }, green: { lat: 43.1936, lon: -77.8178 } },
+                    { number: 13, par: 3, strokeIndex: 10, yardage: 119, teeBox: { lat: 43.1937, lon: -77.8177 }, green: { lat: 43.1939, lon: -77.8174 } },
+                    { number: 14, par: 3, strokeIndex: 4, yardage: 155, teeBox: { lat: 43.1940, lon: -77.8173 }, green: { lat: 43.1943, lon: -77.8169 } },
+                    { number: 15, par: 3, strokeIndex: 12, yardage: 133, teeBox: { lat: 43.1944, lon: -77.8168 }, green: { lat: 43.1947, lon: -77.8164 } },
+                    { number: 16, par: 3, strokeIndex: 14, yardage: 118, teeBox: { lat: 43.1948, lon: -77.8163 }, green: { lat: 43.1950, lon: -77.8160 } },
+                    { number: 17, par: 3, strokeIndex: 16, yardage: 129, teeBox: { lat: 43.1951, lon: -77.8159 }, green: { lat: 43.1954, lon: -77.8155 } },
+                    { number: 18, par: 3, strokeIndex: 18, yardage: 150, teeBox: { lat: 43.1955, lon: -77.8154 }, green: { lat: 43.1958, lon: -77.8150 } }
+                ],
+                source: 'Official Buttonwood Scorecard'
+            },
+            {
+                id: 'churchville-gc',
+                name: 'Churchville Golf Club',
+                location: { lat: 43.1028, lon: -77.8847 },
+                city: 'Churchville',
+                state: 'NY',
+                holes: 18,
+                par: 70,
+                teeBoxes: {
+                    blue: { totalYards: 6200, rating: 70.2, slope: 125 },
+                    white: { totalYards: 5850, rating: 68.0, slope: 119 },
+                    gold: { totalYards: 5400, rating: 65.8, slope: 112 },
+                    red: { totalYards: 4900, rating: 63.5, slope: 108 }
+                },
+                holeData: generateDefaultHoles(43.1028, -77.8847, 70)
+            },
+            {
+                id: 'deerfield-north',
+                name: 'Deerfield Country Club - North Course',
+                location: { lat: 43.1856, lon: -77.9367 },
+                city: 'Brockport',
+                state: 'NY',
+                holes: 9,
+                par: 36,
+                teeBoxes: {
+                    black: { totalYards: 3526, rating: 37.7, slope: 144 },
+                    blue: { totalYards: 3350, rating: 36.6, slope: 133 },
+                    white: { totalYards: 3150, rating: 35.4, slope: 126 },
+                    gold: { totalYards: 2900, rating: 34.2, slope: 118 },
+                    red: { totalYards: 2550, rating: 33.1, slope: 113 }
+                },
+                holeData: [
+                    { number: 1, par: 5, strokeIndex: 17, yardage: 457, teeBox: { lat: 43.1856, lon: -77.9367 }, green: { lat: 43.1866, lon: -77.9355 } },
+                    { number: 2, par: 4, strokeIndex: 3, yardage: 435, teeBox: { lat: 43.1867, lon: -77.9354 }, green: { lat: 43.1875, lon: -77.9345 } },
+                    { number: 3, par: 4, strokeIndex: 7, yardage: 441, teeBox: { lat: 43.1876, lon: -77.9344 }, green: { lat: 43.1884, lon: -77.9335 } },
+                    { number: 4, par: 3, strokeIndex: 15, yardage: 212, teeBox: { lat: 43.1885, lon: -77.9334 }, green: { lat: 43.1890, lon: -77.9328 } },
+                    { number: 5, par: 5, strokeIndex: 5, yardage: 562, teeBox: { lat: 43.1891, lon: -77.9327 }, green: { lat: 43.1902, lon: -77.9315 } },
+                    { number: 6, par: 4, strokeIndex: 9, yardage: 384, teeBox: { lat: 43.1903, lon: -77.9314 }, green: { lat: 43.1910, lon: -77.9305 } },
+                    { number: 7, par: 4, strokeIndex: 1, yardage: 456, teeBox: { lat: 43.1911, lon: -77.9304 }, green: { lat: 43.1919, lon: -77.9295 } },
+                    { number: 8, par: 3, strokeIndex: 13, yardage: 177, teeBox: { lat: 43.1920, lon: -77.9294 }, green: { lat: 43.1924, lon: -77.9288 } },
+                    { number: 9, par: 4, strokeIndex: 11, yardage: 402, teeBox: { lat: 43.1925, lon: -77.9287 }, green: { lat: 43.1932, lon: -77.9278 } }
+                ],
+                source: 'Official Deerfield Scorecard - Black Tees'
+            },
+            {
+                id: 'deerfield-east',
+                name: 'Deerfield Country Club - East Course',
+                location: { lat: 43.1856, lon: -77.9367 },
+                city: 'Brockport',
+                state: 'NY',
+                holes: 9,
+                par: 36,
+                teeBoxes: {
+                    black: { totalYards: 3600, rating: 37.5, slope: 140 },
+                    blue: { totalYards: 3400, rating: 36.8, slope: 135 },
+                    white: { totalYards: 3200, rating: 35.6, slope: 128 },
+                    gold: { totalYards: 2950, rating: 34.4, slope: 120 },
+                    red: { totalYards: 2600, rating: 33.3, slope: 115 }
+                },
+                holeData: generateDefaultHoles(43.1856, -77.9367, 36),
+                source: 'Deerfield CC - 100 Craig Hill Dr'
+            },
+            {
+                id: 'deerfield-south',
+                name: 'Deerfield Country Club - South Course',
+                location: { lat: 43.1856, lon: -77.9367 },
+                city: 'Brockport',
+                state: 'NY',
+                holes: 9,
+                par: 36,
+                teeBoxes: {
+                    black: { totalYards: 3580, rating: 37.4, slope: 136 },
+                    blue: { totalYards: 3380, rating: 36.7, slope: 131 },
+                    white: { totalYards: 3180, rating: 35.5, slope: 124 },
+                    gold: { totalYards: 2930, rating: 34.3, slope: 116 },
+                    red: { totalYards: 2580, rating: 33.2, slope: 111 }
+                },
+                holeData: generateDefaultHoles(43.1856, -77.9367, 36),
+                source: 'Deerfield CC - 100 Craig Hill Dr'
+            },
+            {
+                id: 'cragie-brae',
+                name: 'Cragie Brae Golf Club',
+                location: { lat: 43.0847, lon: -77.5328 },
+                city: 'Scottsville',
+                state: 'NY',
+                holes: 18,
+                par: 72,
+                teeBoxes: {
+                    blue: { totalYards: 6950, rating: 74.2, slope: 138 },
+                    white: { totalYards: 6500, rating: 71.8, slope: 130 },
+                    gold: { totalYards: 6000, rating: 69.2, slope: 122 },
+                    red: { totalYards: 5300, rating: 67.0, slope: 117 }
+                },
+                holeData: [
+                    { number: 1, par: 4, strokeIndex: 7, teeBox: { lat: 43.0847, lon: -77.5328 }, green: { lat: 43.0850, lon: -77.5320 }, yardage: 380 },
+                    { number: 2, par: 5, strokeIndex: 1, teeBox: { lat: 43.0851, lon: -77.5319 }, green: { lat: 43.0858, lon: -77.5310 }, yardage: 520 },
+                    { number: 3, par: 3, strokeIndex: 15, teeBox: { lat: 43.0859, lon: -77.5309 }, green: { lat: 43.0862, lon: -77.5305 }, yardage: 165 },
+                    { number: 4, par: 4, strokeIndex: 5, teeBox: { lat: 43.0863, lon: -77.5304 }, green: { lat: 43.0868, lon: -77.5298 }, yardage: 395 },
+                    { number: 5, par: 4, strokeIndex: 11, teeBox: { lat: 43.0869, lon: -77.5297 }, green: { lat: 43.0873, lon: -77.5290 }, yardage: 410 },
+                    { number: 6, par: 3, strokeIndex: 17, teeBox: { lat: 43.0874, lon: -77.5289 }, green: { lat: 43.0876, lon: -77.5285 }, yardage: 180 },
+                    { number: 7, par: 5, strokeIndex: 3, teeBox: { lat: 43.0877, lon: -77.5284 }, green: { lat: 43.0885, lon: -77.5275 }, yardage: 540 },
+                    { number: 8, par: 4, strokeIndex: 13, teeBox: { lat: 43.0886, lon: -77.5274 }, green: { lat: 43.0890, lon: -77.5268 }, yardage: 370 },
+                    { number: 9, par: 4, strokeIndex: 9, teeBox: { lat: 43.0891, lon: -77.5267 }, green: { lat: 43.0895, lon: -77.5260 }, yardage: 400 },
+                    { number: 10, par: 4, strokeIndex: 8, teeBox: { lat: 43.0896, lon: -77.5259 }, green: { lat: 43.0900, lon: -77.5252 }, yardage: 385 },
+                    { number: 11, par: 3, strokeIndex: 2, teeBox: { lat: 43.0901, lon: -77.5251 }, green: { lat: 43.0903, lon: -77.5247 }, yardage: 170 },
+                    { number: 12, par: 5, strokeIndex: 16, teeBox: { lat: 43.0904, lon: -77.5246 }, green: { lat: 43.0912, lon: -77.5237 }, yardage: 510 },
+                    { number: 13, par: 4, strokeIndex: 6, teeBox: { lat: 43.0913, lon: -77.5236 }, green: { lat: 43.0917, lon: -77.5230 }, yardage: 360 },
+                    { number: 14, par: 4, strokeIndex: 12, teeBox: { lat: 43.0918, lon: -77.5229 }, green: { lat: 43.0922, lon: -77.5222 }, yardage: 420 },
+                    { number: 15, par: 3, strokeIndex: 18, teeBox: { lat: 43.0923, lon: -77.5221 }, green: { lat: 43.0925, lon: -77.5217 }, yardage: 155 },
+                    { number: 16, par: 4, strokeIndex: 4, teeBox: { lat: 43.0926, lon: -77.5216 }, green: { lat: 43.0930, lon: -77.5210 }, yardage: 390 },
+                    { number: 17, par: 5, strokeIndex: 14, teeBox: { lat: 43.0931, lon: -77.5209 }, green: { lat: 43.0939, lon: -77.5200 }, yardage: 530 },
+                    { number: 18, par: 4, strokeIndex: 10, teeBox: { lat: 43.0940, lon: -77.5199 }, green: { lat: 43.0944, lon: -77.5192 }, yardage: 405 }
+                ]
+            },
+            {
+                id: 'oak-hill-rochester',
+                name: 'Oak Hill Country Club',
+                location: { lat: 43.1286, lon: -77.5647 },
+                city: 'Rochester',
+                state: 'NY',
+                holes: 18,
+                par: 70
+            },
+            {
+                id: 'shadow-lake-rochester',
+                name: 'Shadow Lake Golf Club',
+                location: { lat: 43.0731, lon: -77.4231 },
+                city: 'Penfield',
+                state: 'NY',
+                holes: 18,
+                par: 72
+            },
+            {
+                id: 'mill-creek',
+                name: 'Mill Creek Golf Club',
+                location: { lat: 43.1542, lon: -77.5892 },
+                city: 'Rochester',
+                state: 'NY',
+                holes: 18,
+                par: 72,
+                teeBoxes: {
+                    blue: { totalYards: 6750, rating: 73.2, slope: 133 },
+                    white: { totalYards: 6350, rating: 71.0, slope: 126 },
+                    gold: { totalYards: 5850, rating: 68.5, slope: 118 },
+                    red: { totalYards: 5150, rating: 66.2, slope: 113 }
+                },
+                holeData: generateDefaultHoles(43.1542, -77.5892, 72)
+            },
+            {
+                id: 'greystone',
+                name: 'Greystone Golf Club',
+                location: { lat: 43.0456, lon: -77.5789 },
+                city: 'Walworth',
+                state: 'NY',
+                holes: 18,
+                par: 72,
+                teeBoxes: {
+                    blue: { totalYards: 6850, rating: 73.8, slope: 136 },
+                    white: { totalYards: 6450, rating: 71.5, slope: 129 },
+                    gold: { totalYards: 5950, rating: 69.0, slope: 121 },
+                    red: { totalYards: 5250, rating: 66.8, slope: 116 }
+                },
+                holeData: generateDefaultHoles(43.0456, -77.5789, 72)
+            },
+            {
+                id: 'pebble-beach',
+                name: 'Pebble Beach Golf Links',
+                location: { lat: 36.5674, lon: -121.9500 },
+                city: 'Pebble Beach',
+                state: 'CA',
+                holes: 18,
+                par: 72
+            },
+            {
+                id: 'augusta-national',
+                name: 'Augusta National Golf Club',
+                location: { lat: 33.5030, lon: -82.0200 },
+                city: 'Augusta',
+                state: 'GA',
+                holes: 18,
+                par: 72
+            },
+            {
+                id: 'pinehurst-no2',
+                name: 'Pinehurst No. 2',
+                location: { lat: 35.1895, lon: -79.4689 },
+                city: 'Pinehurst',
+                state: 'NC',
+                holes: 18,
+                par: 72
+            },
+            {
+                id: 'torrey-pines',
+                name: 'Torrey Pines Golf Course',
+                location: { lat: 32.8989, lon: -117.2521 },
+                city: 'La Jolla',
+                state: 'CA',
+                holes: 18,
+                par: 72
+            },
+            {
+                id: 'bethpage-black',
+                name: 'Bethpage Black Course',
+                location: { lat: 40.7445, lon: -73.4577 },
+                city: 'Farmingdale',
+                state: 'NY',
+                holes: 18,
+                par: 71
+            }
+        ];
+
+        // App State
+        let courses = []; // Will be populated from OSM or fallback
+        let currentPosition = null;
+        let selectedCourse = null;
+        let selectedTeeBox = null;
+        let currentHole = 1;
+        let shots = [];
+        let holeScores = {}; // Store scores for each hole
+        let watchId = null;
+        let detectedHole = null;
+        let osmCoursesLoaded = false;
+        let players = []; // Store players in the group
+        let currentPlayerIndex = 0; // Track which player is scoring
+
+        // Load courses from OpenStreetMap and merge with fallback
+        async function loadCoursesFromOSM(lat, lon) {
+            try {
+                console.log('Loading courses from OpenStreetMap...');
+                elements.statusText.textContent = 'Finding nearby courses...';
+                
+                const osmCourses = await osmAPI.findNearbyGolfCourses(lat, lon, 25); // 25km radius
+                
+                if (osmCourses && osmCourses.length > 0) {
+                    console.log(`Found ${osmCourses.length} courses from OSM`);
+                    
+                    // Merge OSM courses with fallback, removing OSM duplicates
+                    const mergedCourses = [...fallbackCourses]; // Start with fallback (highest priority)
+                    
+                    osmCourses.forEach(osmCourse => {
+                        // Check if we already have this course in fallback
+                        const isDuplicate = fallbackCourses.some(fallbackCourse => {
+                            // Check for name similarity and location proximity
+                            const nameSimilar = fallbackCourse.name.toLowerCase().includes(osmCourse.name.toLowerCase().split('-')[0].trim()) ||
+                                              osmCourse.name.toLowerCase().includes(fallbackCourse.name.toLowerCase().split('-')[0].trim());
+                            const distance = calculateDistance(
+                                fallbackCourse.location.lat,
+                                fallbackCourse.location.lon,
+                                osmCourse.location.lat,
+                                osmCourse.location.lon
+                            );
+                            // Consider duplicate if names similar and within 1km
+                            return nameSimilar && distance < 1000;
+                        });
+                        
+                        if (!isDuplicate) {
+                            mergedCourses.push(osmCourse);
+                        } else {
+                            console.log(`Skipping OSM duplicate: ${osmCourse.name} (using fallback data instead)`);
+                        }
+                    });
+                    
+                    courses = mergedCourses;
+                    osmCoursesLoaded = true;
+                    
+                    console.log(`Total courses after merge: ${courses.length} (${fallbackCourses.length} fallback + ${mergedCourses.length - fallbackCourses.length} OSM)`);
+                    
+                    // Cache merged courses locally
+                    localStorage.setItem('cachedCourses', JSON.stringify({
+                        timestamp: Date.now(),
+                        location: { lat, lon },
+                        courses: mergedCourses
+                    }));
+                    
+                    return mergedCourses;
+                } else {
+                    console.log('No courses found in OSM, using fallback only');
+                    courses = fallbackCourses;
+                    return fallbackCourses;
+                }
+            } catch (error) {
+                console.error('Error loading from OSM:', error);
+                courses = fallbackCourses;
+                return fallbackCourses;
+            }
+        }
+
+        // Load cached courses if available and recent
+        function loadCachedCourses(lat, lon) {
+            const cached = localStorage.getItem('cachedCourses');
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    const age = Date.now() - data.timestamp;
+                    const distance = calculateDistance(lat, lon, data.location.lat, data.location.lon);
+                    
+                    // Use cache if less than 24 hours old and within 10km of cached location
+                    if (age < 24 * 60 * 60 * 1000 && distance < 10000) {
+                        console.log('Using cached courses (merged with fallback)');
+                        
+                        // Merge cached courses with fallback, prioritizing fallback
+                        const mergedCourses = [...fallbackCourses];
+                        
+                        data.courses.forEach(cachedCourse => {
+                            const isDuplicate = fallbackCourses.some(fallbackCourse => {
+                                const nameSimilar = fallbackCourse.name.toLowerCase().includes(cachedCourse.name.toLowerCase().split('-')[0].trim()) ||
+                                                  cachedCourse.name.toLowerCase().includes(fallbackCourse.name.toLowerCase().split('-')[0].trim());
+                                const dist = calculateDistance(
+                                    fallbackCourse.location.lat,
+                                    fallbackCourse.location.lon,
+                                    cachedCourse.location.lat,
+                                    cachedCourse.location.lon
+                                );
+                                return nameSimilar && dist < 1000;
+                            });
+                            
+                            if (!isDuplicate) {
+                                mergedCourses.push(cachedCourse);
+                            }
+                        });
+                        
+                        courses = mergedCourses;
+                        console.log(`Loaded ${courses.length} courses from cache (${fallbackCourses.length} fallback + ${courses.length - fallbackCourses.length} cached)`);
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Error loading cached courses:', e);
+                }
+            }
+            return false;
+        }
+
+        // Save custom course
+        function saveCustomCourse(course) {
+            const customCourses = localStorage.getItem('customCourses');
+            let custom = customCourses ? JSON.parse(customCourses) : [];
+            custom.push(course);
+            localStorage.setItem('customCourses', JSON.stringify(custom));
+            courses.push(course);
+        }
+
+        // UI Elements
+        const elements = {
+            gpsStatus: document.getElementById('gpsStatus'),
+            statusText: document.getElementById('statusText'),
+            headerSubtitle: document.getElementById('headerSubtitle'),
+            loadingScreen: document.getElementById('loadingScreen'),
+            courseSelectionScreen: document.getElementById('courseSelectionScreen'),
+            teeBoxSelectionScreen: document.getElementById('teeBoxSelectionScreen'),
+            gpsTrackingScreen: document.getElementById('gpsTrackingScreen'),
+            bottomNav: document.getElementById('bottomNav'),
+            courseList: document.getElementById('courseList'),
+            searchBox: document.getElementById('searchBox'),
+            startPlayingBtn: document.getElementById('startPlayingBtn'),
+            teeBoxGrid: document.getElementById('teeBoxGrid'),
+            confirmTeeBoxBtn: document.getElementById('confirmTeeBoxBtn'),
+            distanceValue: document.getElementById('distanceValue'),
+            compassArrow: document.getElementById('compassArrow'),
+            compassDirection: document.getElementById('compassDirection'),
+            holeNumber: document.getElementById('holeNumber'),
+            holePar: document.getElementById('holePar'),
+            courseName: document.getElementById('courseName'),
+            gpsAccuracy: document.getElementById('gpsAccuracy'),
+            shotCount: document.getElementById('shotCount'),
+            shotList: document.getElementById('shotList'),
+            recordShotBtn: document.getElementById('recordShotBtn'),
+            nextHoleBtn: document.getElementById('nextHoleBtn'),
+            playerManagementScreen: document.getElementById('playerManagementScreen'),
+            playerList: document.getElementById('playerList'),
+            startPlayingBtn2: document.getElementById('startPlayingBtn2')
+        };
+
+        // Utility Functions
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // Earth's radius in meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            const distanceMeters = R * c; // Distance in meters
+            const distanceYards = distanceMeters * 1.09361; // Convert meters to yards
+            return Math.round(distanceYards); // Return rounded yards
+        }
+
+        function calculateBearing(lat1, lon1, lat2, lon2) {
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const y = Math.sin(Δλ) * Math.cos(φ2);
+            const x = Math.cos(φ1) * Math.sin(φ2) -
+                      Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+            const θ = Math.atan2(y, x);
+            return (θ * 180 / Math.PI + 360) % 360;
+        }
+
+        function getCompassDirection(bearing) {
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            return directions[Math.round(bearing / 45) % 8];
+        }
+
+        // Generate default hole data for courses without mapped holes
+        function generateDefaultHoles(centerLat, centerLon, coursePar) {
+            const holes = [];
+            const parPattern = coursePar === 72 ? [4,5,3,4,4,3,5,4,4,4,3,5,4,4,3,4,5,4] :
+                              coursePar === 71 ? [4,5,3,4,4,3,5,4,4,4,3,5,4,4,3,4,4,4] :
+                              [4,4,3,4,5,4,3,4,4,4,4,3,5,4,4,3,4,4]; // default 70
+            
+            // Standard stroke index pattern (hardest holes get lowest numbers)
+            const strokeIndexPattern = coursePar === 72 ?
+                [7,1,15,5,11,17,3,13,9,8,2,16,6,12,18,4,14,10] :
+                coursePar === 71 ?
+                [7,1,15,5,11,17,3,13,9,8,2,16,6,12,18,4,14,10] :
+                [7,1,15,5,11,17,3,13,9,8,2,16,6,12,18,4,14,10]; // Par 70
+            
+            const yardagePattern = {
+                3: [150, 165, 180, 155, 170, 160],
+                4: [350, 380, 395, 410, 370, 400, 385, 360, 420, 390, 405],
+                5: [500, 520, 540, 510, 530]
+            };
+            
+            let par3Index = 0, par4Index = 0, par5Index = 0;
+            
+            for (let i = 0; i < 18; i++) {
+                const par = parPattern[i];
+                let yardage;
+                
+                if (par === 3) {
+                    yardage = yardagePattern[3][par3Index % yardagePattern[3].length];
+                    par3Index++;
+                } else if (par === 4) {
+                    yardage = yardagePattern[4][par4Index % yardagePattern[4].length];
+                    par4Index++;
+                } else {
+                    yardage = yardagePattern[5][par5Index % yardagePattern[5].length];
+                    par5Index++;
+                }
+                
+                // Arrange holes in a rough circular pattern around the course center
+                const angle = (i / 18) * 2 * Math.PI;
+                const radius = 0.01; // ~1km radius
+                const teeOffset = 0.0005; // ~50m between tee and green
+                
+                holes.push({
+                    number: i + 1,
+                    par: par,
+                    strokeIndex: strokeIndexPattern[i],
+                    teeBox: {
+                        lat: centerLat + Math.cos(angle) * radius,
+                        lon: centerLon + Math.sin(angle) * radius
+                    },
+                    green: {
+                        lat: centerLat + Math.cos(angle) * radius + Math.cos(angle + Math.PI/4) * teeOffset,
+                        lon: centerLon + Math.sin(angle) * radius + Math.sin(angle + Math.PI/4) * teeOffset
+                    },
+                    yardage: yardage
+                });
+            }
+            
+            return holes;
+        }
+
+        // Detect which hole the player is closest to based on tee box proximity
+        function detectCurrentHole(lat, lon) {
+            if (!selectedCourse || !selectedCourse.holeData) return null;
+            
+            let closestHole = null;
+            let minDistance = Infinity;
+            
+            selectedCourse.holeData.forEach(hole => {
+                const distanceToTee = calculateDistance(
+                    lat, lon,
+                    hole.teeBox.lat, hole.teeBox.lon
+                );
+                
+                // If within 100 yards of a tee box, that's likely the current hole
+                if (distanceToTee < 100 && distanceToTee < minDistance) {
+                    minDistance = distanceToTee;
+                    closestHole = hole;
+                }
+            });
+            
+            return closestHole;
+        }
+
+        // Initialize App
+        async function init() {
+            console.log('Initializing GPS app...');
+            
+            // Check if geolocation is supported
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser. Please use a modern browser with GPS support.');
+                elements.gpsStatus.classList.add('inactive');
+                elements.statusText.textContent = 'GPS Not Supported';
+                return;
+            }
+
+            try {
+                console.log('Requesting GPS position...');
+                elements.statusText.textContent = 'Getting your location...';
+                
+                const position = await getCurrentPosition();
+                currentPosition = position.coords;
+
+                console.log('GPS position obtained:', currentPosition.latitude, currentPosition.longitude);
+                console.log('Accuracy:', currentPosition.accuracy, 'meters');
+
+                elements.gpsStatus.classList.remove('inactive');
+                elements.statusText.textContent = `GPS Active (${Math.round(currentPosition.accuracy)}m accuracy)`;
+
+                // Load custom courses from database manager first
+                const customCourses = loadCustomCourses();
+                console.log(`Loaded ${customCourses.length} custom courses from database`);
+                
+                // Merge custom courses with fallback courses
+                fallbackCourses = [...customCourses, ...fallbackCourses];
+                
+                // Load courses from OpenStreetMap or cache
+                const usedCache = loadCachedCourses(currentPosition.latitude, currentPosition.longitude);
+                
+                if (!usedCache) {
+                    await loadCoursesFromOSM(currentPosition.latitude, currentPosition.longitude);
+                }
+
+                console.log(`Total courses available: ${courses.length}`);
+
+                // Auto-detect course based on GPS location
+                autoDetectCourse();
+            } catch (error) {
+                console.error('GPS error:', error);
+                elements.gpsStatus.classList.add('inactive');
+                
+                let errorMessage = 'GPS Error: ';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage += 'Location permission denied. Please enable location access in your browser settings.';
+                        elements.statusText.textContent = 'Permission Denied';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage += 'Location information unavailable. Make sure GPS is enabled on your device.';
+                        elements.statusText.textContent = 'GPS Unavailable';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage += 'Location request timed out. Please try again.';
+                        elements.statusText.textContent = 'GPS Timeout';
+                        break;
+                    default:
+                        errorMessage += 'Unknown error occurred.';
+                        elements.statusText.textContent = 'GPS Error';
+                }
+                
+                alert(errorMessage);
+                
+                // Show course selection anyway with all courses
+                elements.loadingScreen.classList.remove('active');
+                elements.courseSelectionScreen.classList.add('active');
+                elements.headerSubtitle.textContent = 'Select Your Course (GPS unavailable)';
+                renderCoursesWithoutGPS();
+            }
+        }
+
+        function autoDetectCourse() {
+            if (!currentPosition) {
+                showCourseSelection();
+                return;
+            }
+
+            // Find all courses within 5 miles
+            const coursesWithDistance = courses.map(course => {
+                const distanceYards = calculateDistance(
+                    currentPosition.latitude,
+                    currentPosition.longitude,
+                    course.location.lat,
+                    course.location.lon
+                );
+                const distanceMiles = distanceYards / 1760; // Convert yards to miles
+                return { ...course, distance: distanceYards, distanceMiles };
+            }).sort((a, b) => a.distance - b.distance);
+
+            // Filter courses within 5 miles
+            const nearbyCourses = coursesWithDistance.filter(c => c.distanceMiles <= 5);
+
+            console.log(`Found ${nearbyCourses.length} courses within 5 miles`);
+
+            if (nearbyCourses.length > 0) {
+                // Show course selection with nearby courses
+                console.log('Showing course selection with nearby courses');
+                showCourseSelection();
+            } else {
+                // Show all courses if none within 5 miles
+                console.log(`No courses within 5 miles. Showing all ${courses.length} courses`);
+                showCourseSelection();
+            }
+        }
+
+        function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    resolve,
+                    reject,
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 15000,  // Increased timeout
+                        maximumAge: 0
+                    }
+                );
+            });
+        }
+
+        function renderCoursesWithoutGPS() {
+            // Show all courses without distance sorting
+            elements.courseList.innerHTML = courses.map((course, index) => `
+                <div class="course-card" data-course-id="${course.id}">
+                    <div class="course-name">${course.name}</div>
+                    <div class="course-location">${course.city}, ${course.state}</div>
+                    <div class="course-details">
+                        <span>${course.holes} holes • Par ${course.par}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.course-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const courseId = this.dataset.courseId;
+                    selectCourse(courseId);
+                });
+            });
+        }
+
+        function showCourseSelection() {
+            elements.loadingScreen.classList.remove('active');
+            elements.courseSelectionScreen.classList.add('active');
+            
+            if (currentPosition) {
+                elements.headerSubtitle.textContent = `Your Location: ${currentPosition.latitude.toFixed(4)}, ${currentPosition.longitude.toFixed(4)}`;
+                renderCourses();
+            } else {
+                elements.headerSubtitle.textContent = 'Select Your Course (GPS unavailable)';
+                renderCoursesWithoutGPS();
+            }
+        }
+
+        function renderCourses() {
+            if (!currentPosition) {
+                renderCoursesWithoutGPS();
+                return;
+            }
+
+            console.log('Rendering courses with GPS location:', currentPosition.latitude, currentPosition.longitude);
+
+            const nearbyCourses = courses.map(course => {
+                const distanceYards = calculateDistance(
+                    currentPosition.latitude,
+                    currentPosition.longitude,
+                    course.location.lat,
+                    course.location.lon
+                );
+                const distanceMiles = distanceYards / 1760; // Convert yards to miles
+
+                console.log(`Distance to ${course.name}:`, distanceMiles.toFixed(1), 'miles (', distanceYards, 'yards)');
+
+                return { ...course, distance: distanceMiles };
+            }).sort((a, b) => a.distance - b.distance);
+
+            elements.courseList.innerHTML = nearbyCourses.map((course, index) => `
+                <div class="course-card ${index === 0 ? 'closest' : ''}" data-course-id="${course.id}">
+                    <div class="course-name">
+                        ${course.name}
+                        ${index === 0 ? '<span class="badge badge-closest">Closest</span>' : ''}
+                    </div>
+                    <div class="course-location">${course.city}, ${course.state}</div>
+                    <div class="course-details">
+                        <span>${course.holes} holes • Par ${course.par}</span>
+                        <span class="course-distance">📍 ${course.distance.toFixed(1)} mi away</span>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.course-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const courseId = this.dataset.courseId;
+                    console.log('Course clicked:', courseId);
+                    selectCourse(courseId);
+                });
+            });
+        }
+
+        function selectCourse(courseId) {
+            console.log('Selecting course:', courseId);
+            selectedCourse = courses.find(c => c.id === courseId);
+            console.log('Selected course:', selectedCourse);
+            
+            if (!selectedCourse) {
+                console.error('Course not found:', courseId);
+                return;
+            }
+            
+            document.querySelectorAll('.course-card').forEach(card => {
+                card.classList.remove('selected');
+                if (card.dataset.courseId === courseId) {
+                    card.classList.add('selected');
+                    console.log('Card selected:', card);
+                }
+            });
+
+            elements.startPlayingBtn.disabled = false;
+            elements.startPlayingBtn.textContent = `Start Playing at ${selectedCourse.name}`;
+            
+            // Haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+
+        elements.startPlayingBtn.addEventListener('click', showTeeBoxSelection);
+
+        function showTeeBoxSelection() {
+            if (!selectedCourse) return;
+
+            elements.courseSelectionScreen.classList.remove('active');
+            elements.teeBoxSelectionScreen.classList.add('active');
+            elements.headerSubtitle.textContent = 'Select Tee Boxes';
+
+            renderTeeBoxes();
+        }
+
+        function renderTeeBoxes() {
+            if (!selectedCourse.teeBoxes) {
+                // If course doesn't have tee box data, skip to playing
+                startPlaying();
+                return;
+            }
+
+            elements.teeBoxGrid.innerHTML = teeBoxOptions.map(teeBox => {
+                const courseTeebox = selectedCourse.teeBoxes[teeBox.id];
+                if (!courseTeebox) return '';
+
+                return `
+                    <div class="tee-box-card" data-tee-id="${teeBox.id}">
+                        <div class="tee-color ${teeBox.color}"></div>
+                        <div class="tee-name">${teeBox.name}</div>
+                        <div class="tee-yardage">${courseTeebox.totalYards} yards</div>
+                        <div class="tee-yardage" style="font-size: 0.8em; opacity: 0.7;">
+                            ${courseTeebox.rating}/${courseTeebox.slope}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.tee-box-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.tee-box-card').forEach(c => c.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedTeeBox = this.dataset.teeId;
+                    elements.confirmTeeBoxBtn.disabled = false;
+
+                    // Haptic feedback
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                });
+            });
+        }
+
+        elements.confirmTeeBoxBtn.addEventListener('click', showPlayerManagement);
+
+        function showPlayerManagement() {
+            if (!selectedCourse || !selectedTeeBox) return;
+
+            elements.teeBoxSelectionScreen.classList.remove('active');
+            elements.playerManagementScreen.classList.add('active');
+            elements.headerSubtitle.textContent = 'Add Players';
+            
+            renderPlayerList();
+        }
+
+        // Player Management Functions
+        window.addPlayer = function() {
+            const nameInput = document.getElementById('playerNameInput');
+            const handicapInput = document.getElementById('playerHandicapInput');
+            
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            const handicap = parseFloat(handicapInput.value) || 0;
+            
+            players.push({
+                id: Date.now().toString(),
+                name: name,
+                handicap: handicap,
+                scores: {}
+            });
+            
+            nameInput.value = '';
+            handicapInput.value = '';
+            
+            renderPlayerList();
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        };
+
+        window.removePlayer = function(playerId) {
+            players = players.filter(p => p.id !== playerId);
+            renderPlayerList();
+        };
+
+        window.skipPlayers = function() {
+            players = [];
+            startPlaying();
+        };
+
+        function renderPlayerList() {
+            if (players.length === 0) {
+                elements.playerList.innerHTML = '<p style="opacity: 0.7; text-align: center;">No players added yet</p>';
+                return;
+            }
+            
+            elements.playerList.innerHTML = players.map(player => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-weight: 700;">${player.name}</div>
+                        <div style="font-size: 0.85em; opacity: 0.8;">Handicap: ${player.handicap}</div>
+                    </div>
+                    <button onclick="removePlayer('${player.id}')" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        elements.startPlayingBtn2.addEventListener('click', startPlaying);
+
+        function startPlaying() {
+            if (!selectedCourse) return;
+
+            elements.playerManagementScreen.classList.remove('active');
+            elements.gpsTrackingScreen.classList.add('active');
+            elements.bottomNav.style.display = 'flex';
+            
+            const teeBoxName = selectedTeeBox ?
+                teeBoxOptions.find(t => t.id === selectedTeeBox)?.name : '';
+            elements.headerSubtitle.textContent = `${selectedCourse.name}${teeBoxName ? ' - ' + teeBoxName : ''}`;
+            elements.courseName.textContent = selectedCourse.name;
+
+            startGPSTracking();
+        }
+
+        function startGPSTracking() {
+            // Clear any existing watch
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+
+            // Start continuous GPS tracking with high accuracy
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    console.log('GPS Update:', position.coords.latitude, position.coords.longitude);
+                    currentPosition = position.coords;
+                    
+                    // Update status
+                    elements.gpsStatus.classList.remove('inactive');
+                    elements.statusText.textContent = `GPS Active (${Math.round(position.coords.accuracy)}m)`;
+                    
+                    updateGPSDisplay();
+                    updatePlayerScores();
+                },
+                (error) => {
+                    console.error('GPS error:', error);
+                    elements.gpsStatus.classList.add('inactive');
+                    elements.statusText.textContent = 'GPS Error - Retrying...';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0  // Always get fresh location
+                }
+            );
+
+            // Also get immediate position update
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    console.log('Initial GPS:', position.coords.latitude, position.coords.longitude);
+                    currentPosition = position.coords;
+                    updateGPSDisplay();
+                },
+                (error) => console.error('Initial GPS error:', error),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function updateGPSDisplay() {
+            if (!currentPosition || !selectedCourse) return;
+
+            const lat = currentPosition.latitude;
+            const lon = currentPosition.longitude;
+
+            // Auto-detect hole based on proximity to tee boxes
+            const detected = detectCurrentHole(lat, lon);
+            if (detected && detected.number !== currentHole) {
+                detectedHole = detected;
+                currentHole = detected.number;
+                updateHoleDisplay();
+                
+                // Visual feedback for auto-detection
+                elements.holeNumber.style.color = '#4CAF50';
+                setTimeout(() => { elements.holeNumber.style.color = ''; }, 2000);
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate([50, 100, 50]);
+                }
+            }
+
+            // Get current hole data
+            const holeData = selectedCourse.holeData ?
+                selectedCourse.holeData.find(h => h.number === currentHole) : null;
+            
+            const greenLat = holeData ? holeData.green.lat : selectedCourse.location.lat;
+            const greenLon = holeData ? holeData.green.lon : selectedCourse.location.lon;
+
+            const distance = calculateDistance(lat, lon, greenLat, greenLon);
+            const bearing = calculateBearing(lat, lon, greenLat, greenLon);
+
+            // Update display with hole-specific information
+            elements.distanceValue.textContent = distance;
+            elements.compassArrow.style.transform = `rotate(${bearing}deg)`;
+            elements.compassDirection.textContent = getCompassDirection(bearing);
+            elements.gpsAccuracy.textContent = Math.round(currentPosition.accuracy) + ' m';
+
+            // Update hole details
+            updateHoleDisplay();
+            
+            // Update hole layout visualization
+            updateHoleLayout(holeData, lat, lon, greenLat, greenLon, distance);
+
+            // Log for debugging
+            console.log('Distance to green:', distance, 'yards');
+            console.log('Your location:', lat, lon);
+            console.log('Green location:', greenLat, greenLon);
+            if (holeData) {
+                console.log('Hole data:', holeData);
+            }
+        }
+
+        function updateHoleDisplay() {
+            const holeData = selectedCourse && selectedCourse.holeData ?
+                selectedCourse.holeData.find(h => h.number === currentHole) : null;
+
+            elements.holeNumber.textContent = currentHole;
+            
+            if (holeData) {
+                elements.holePar.textContent = holeData.par;
+                
+                const yardageEl = document.getElementById('holeYardage');
+                const strokeIndexEl = document.getElementById('strokeIndex');
+                
+                if (yardageEl) yardageEl.textContent = holeData.yardage;
+                if (strokeIndexEl) strokeIndexEl.textContent = holeData.strokeIndex || '--';
+                
+                console.log(`Hole ${currentHole}: Par ${holeData.par}, ${holeData.yardage} yards, SI ${holeData.strokeIndex}`);
+            }
+        }
+
+        function updateHoleLayout(holeData, playerLat, playerLon, greenLat, greenLon, distanceToGreen) {
+            // Get tee box location
+            const teeLat = holeData && holeData.teeBox ? holeData.teeBox.lat : playerLat;
+            const teeLon = holeData && holeData.teeBox ? holeData.teeBox.lon : playerLon;
+            
+            // Calculate distances
+            const totalHoleYards = holeData ? holeData.yardage : distanceToGreen;
+            const distanceFromTee = calculateDistance(teeLat, teeLon, playerLat, playerLon);
+            
+            // Update distance labels
+            const layoutTeeYards = document.getElementById('layoutTeeYards');
+            const layoutGreenYards = document.getElementById('layoutGreenYards');
+            if (layoutTeeYards) layoutTeeYards.textContent = Math.round(distanceFromTee);
+            if (layoutGreenYards) layoutGreenYards.textContent = Math.round(distanceToGreen);
+            
+            // Calculate player position on the hole (0 = tee, 1 = green)
+            const progress = Math.min(Math.max(distanceFromTee / totalHoleYards, 0), 1);
+            
+            // Update SVG elements
+            const playerPosition = document.getElementById('playerPosition');
+            if (playerPosition) {
+                // Position player along the fairway path
+                const x = 35 + (230 * progress); // 35 (tee) to 265 (green)
+                const y = 177 - (147 * progress); // 177 (tee) to 30 (green)
+                playerPosition.setAttribute('cx', x);
+                playerPosition.setAttribute('cy', y);
+                
+                // Update "YOU" label
+                const youLabel = playerPosition.previousElementSibling;
+                if (youLabel && youLabel.tagName === 'text') {
+                    youLabel.setAttribute('x', x);
+                    youLabel.setAttribute('y', y - 12);
+                }
+            }
+            
+            // Update distance line
+            const distanceLine = document.getElementById('distanceLine');
+            if (distanceLine && playerPosition) {
+                const x = parseFloat(playerPosition.getAttribute('cx'));
+                const y = parseFloat(playerPosition.getAttribute('cy'));
+                distanceLine.setAttribute('x1', x);
+                distanceLine.setAttribute('y1', y);
+            }
+            
+            // Adjust fairway path based on hole shape (if available)
+            if (holeData && holeData.par) {
+                const fairwayPath = document.getElementById('fairwayPath');
+                if (fairwayPath) {
+                    // Different path shapes for different pars
+                    if (holeData.par === 3) {
+                        // Straight for par 3
+                        fairwayPath.setAttribute('d', 'M 35 170 L 265 30');
+                        fairwayPath.setAttribute('stroke-width', '40');
+                    } else if (holeData.par === 5) {
+                        // Slight dogleg for par 5
+                        fairwayPath.setAttribute('d', 'M 35 170 Q 120 120 265 30');
+                        fairwayPath.setAttribute('stroke-width', '70');
+                    } else {
+                        // Standard for par 4
+                        fairwayPath.setAttribute('d', 'M 35 170 Q 150 100 265 30');
+                        fairwayPath.setAttribute('stroke-width', '60');
+                    }
+                }
+            }
+        }
+
+        elements.recordShotBtn.addEventListener('click', () => {
+            if (!currentPosition) return;
+
+            const shot = {
+                hole: currentHole,
+                lat: currentPosition.latitude,
+                lon: currentPosition.longitude,
+                timestamp: Date.now()
+            };
+
+            if (shots.length > 0) {
+                const lastShot = shots[shots.length - 1];
+                shot.distance = calculateDistance(
+                    lastShot.lat, lastShot.lon,
+                    shot.lat, shot.lon
+                );
+            }
+
+            shots.push(shot);
+            updateShotList();
+
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        });
+
+        elements.nextHoleBtn.addEventListener('click', () => {
+            const maxHoles = selectedCourse ? selectedCourse.holes : 18;
+            if (currentHole < maxHoles) {
+                currentHole++;
+                shots = [];
+                detectedHole = null; // Reset detection for new hole
+                
+                // Reset to first player for new hole
+                currentPlayerIndex = 0;
+                
+                // Clear all players' scores for the new hole to show they haven't scored yet
+                if (players.length > 0) {
+                    players.forEach(player => {
+                        if (player.scores && player.scores[currentHole]) {
+                            // Only clear if moving forward to a new hole
+                            // Keep existing scores if going back
+                        }
+                    });
+                }
+                
+                updateHoleDisplay();
+                updateShotList();
+                updateGPSDisplay(); // Update display for new hole
+                updatePlayerScores(); // Update player scores display
+                
+                // Update score display for new hole (solo play)
+                if (players.length === 0) {
+                    const score = holeScores[currentHole];
+                    document.getElementById('holeScore').textContent = score || '-';
+                }
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            } else {
+                showRoundSummary();
+            }
+        });
+
+        // Toggle hole layout visibility
+        window.toggleHoleLayout = function() {
+            const container = document.getElementById('holeLayoutContainer');
+            const toggle = document.getElementById('layoutToggle');
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                container.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        };
+
+        function showRoundSummary() {
+            let summary = '🏌️ Round Complete!\n\n';
+            let totalScore = 0;
+            let totalPar = 0;
+            
+            for (let i = 1; i <= (selectedCourse ? selectedCourse.holes : 18); i++) {
+                const score = holeScores[i];
+                const hole = selectedCourse?.holeData?.[i-1];
+                const par = hole?.par || 4;
+                
+                if (score) {
+                    summary += `Hole ${i}: ${score} (Par ${par})\n`;
+                    totalScore += score;
+                    totalPar += par;
+                }
+            }
+            
+            if (totalScore > 0) {
+                const scoreToPar = totalScore - totalPar;
+                const scoreToParText = scoreToPar > 0 ? `+${scoreToPar}` : scoreToPar === 0 ? 'E' : scoreToPar;
+                summary += `\nTotal: ${totalScore} (${scoreToParText})`;
+            }
+            
+            alert(summary);
+        }
+
+        function updateShotList() {
+            const holeShots = shots.filter(s => s.hole === currentHole);
+            elements.shotCount.textContent = holeShots.length;
+
+            if (holeShots.length === 0) {
+                elements.shotList.innerHTML = '<p style="opacity: 0.7; text-align: center;">No shots recorded yet</p>';
+                return;
+            }
+
+            elements.shotList.innerHTML = holeShots.map((shot, index) => `
+                <div class="shot-item">
+                    <span style="font-weight: 700;">Shot ${index + 1}</span>
+                    <span style="color: #4ade80; font-weight: 600;">${shot.distance || '---'} yards</span>
+                </div>
+            `).join('');
+        }
+
+        // Score tracking functions
+        window.setScore = function(score) {
+            if (players.length > 0) {
+                // Set score for current player
+                const player = players[currentPlayerIndex];
+                if (!player.scores) player.scores = {};
+                player.scores[currentHole] = score;
+                
+                // Move to next player
+                currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+                
+                updatePlayerScores();
+            } else {
+                // Solo play - use old system
+                holeScores[currentHole] = score;
+                document.getElementById('holeScore').textContent = score;
+            }
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        };
+
+        window.clearScore = function() {
+            if (players.length > 0) {
+                // Clear score for current player
+                const player = players[currentPlayerIndex];
+                if (player.scores) {
+                    delete player.scores[currentHole];
+                }
+                updatePlayerScores();
+            } else {
+                // Solo play
+                delete holeScores[currentHole];
+                document.getElementById('holeScore').textContent = '-';
+            }
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        };
+
+        window.selectPlayer = function(index) {
+            currentPlayerIndex = index;
+            updatePlayerScores();
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        };
+
+        // Calculate handicap strokes for a hole
+        function getHandicapStrokes(playerHandicap, holeStrokeIndex) {
+            if (!holeStrokeIndex || playerHandicap <= 0) return 0;
+            
+            // 9-hole handicap calculation
+            const holesCount = selectedCourse?.holes || 9;
+            const strokesPerHole = Math.floor(playerHandicap / holesCount);
+            const extraStrokes = playerHandicap % holesCount;
+            
+            // Give extra strokes to holes with lower stroke index
+            return strokesPerHole + (holeStrokeIndex <= extraStrokes ? 1 : 0);
+        }
+
+        function updatePlayerScores() {
+            if (players.length === 0) {
+                document.getElementById('playerScoresSection').style.display = 'none';
+                document.getElementById('currentPlayerName').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('playerScoresSection').style.display = 'block';
+            document.getElementById('currentPlayerName').style.display = 'block';
+            
+            const activePlayer = players[currentPlayerIndex];
+            document.getElementById('activePlayerName').textContent = activePlayer.name;
+            
+            // Get current hole data for stroke index
+            const holeData = selectedCourse?.holeData?.find(h => h.number === currentHole);
+            const strokeIndex = holeData?.strokeIndex || 10;
+            
+            const playerScoresList = document.getElementById('playerScoresList');
+            playerScoresList.innerHTML = players.map((player, index) => {
+                const grossScore = player.scores?.[currentHole] || '-';
+                const isActive = index === currentPlayerIndex;
+                
+                // Calculate net score
+                let netScore = '-';
+                if (grossScore !== '-') {
+                    const handicapStrokes = getHandicapStrokes(player.handicap, strokeIndex);
+                    netScore = grossScore - handicapStrokes;
+                }
+                
+                return `
+                    <div onclick="selectPlayer(${index})" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 12px;
+                        background: ${isActive ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255,255,255,0.1)'};
+                        border-radius: 8px;
+                        margin-bottom: 8px;
+                        border: 2px solid ${isActive ? '#4ade80' : 'transparent'};
+                        cursor: pointer;
+                    ">
+                        <div>
+                            <div style="font-weight: 700;">${player.name}</div>
+                            <div style="font-size: 0.85em; opacity: 0.8;">Handicap: ${player.handicap}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 2em; font-weight: 800; color: ${isActive ? '#4ade80' : 'white'};">
+                                ${grossScore}
+                            </div>
+                            <div style="font-size: 0.9em; opacity: 0.8; margin-top: -5px;">
+                                ${netScore !== '-' ? `Net: ${netScore}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Scorecard and Leaderboard Functions
+        window.showScorecard = function() {
+            document.getElementById('scorecardModal').style.display = 'block';
+            showTab('scorecard');
+        };
+
+        window.hideScorecard = function() {
+            document.getElementById('scorecardModal').style.display = 'none';
+        };
+
+        window.showTab = function(tab) {
+            // Hide all views
+            document.getElementById('scorecardView').style.display = 'none';
+            document.getElementById('leaderboardView').style.display = 'none';
+            document.getElementById('gamesView').style.display = 'none';
+            
+            // Reset all tab buttons
+            document.getElementById('scorecardTab').className = 'btn btn-secondary';
+            document.getElementById('leaderboardTab').className = 'btn btn-secondary';
+            document.getElementById('gamesTab').className = 'btn btn-secondary';
+            
+            // Show selected view
+            if (tab === 'scorecard') {
+                document.getElementById('scorecardView').style.display = 'block';
+                document.getElementById('scorecardTab').className = 'btn btn-primary';
+                renderScorecard();
+            } else if (tab === 'leaderboard') {
+                document.getElementById('leaderboardView').style.display = 'block';
+                document.getElementById('leaderboardTab').className = 'btn btn-primary';
+                renderLeaderboard();
+            } else if (tab === 'games') {
+                document.getElementById('gamesView').style.display = 'block';
+                document.getElementById('gamesTab').className = 'btn btn-primary';
+                renderGame();
+            }
+        };
+
+        // Game Rendering Functions
+        window.renderGame = function() {
+            const gameType = document.getElementById('gameType').value;
+            const maxHoles = selectedCourse ? selectedCourse.holes : 9;
+            const holeData = selectedCourse?.holeData || [];
+            
+            // Render game-specific settings
+            renderGameSettings(gameType);
+            
+            // Render game results
+            let html = '';
+            
+            switch(gameType) {
+                case 'stableford':
+                    html = renderStableford(maxHoles, holeData, false);
+                    break;
+                case 'modified-stableford':
+                    html = renderStableford(maxHoles, holeData, true);
+                    break;
+                case 'skins-gross':
+                    html = renderSkins(maxHoles, holeData, false);
+                    break;
+                case 'skins-net':
+                    html = renderSkins(maxHoles, holeData, true);
+                    break;
+                case 'nassau':
+                    html = renderNassau(maxHoles, holeData);
+                    break;
+                case 'match-play':
+                    html = renderMatchPlay(maxHoles, holeData);
+                    break;
+                case 'best-ball':
+                    html = renderBestBall(maxHoles, holeData);
+                    break;
+                case 'scramble':
+                    html = renderScramble(maxHoles, holeData);
+                    break;
+                case 'bingo-bango-bongo':
+                    html = renderBingoBangoBongo(maxHoles, holeData);
+                    break;
+                case 'wolf':
+                    html = renderWolf(maxHoles, holeData);
+                    break;
+                case 'snake':
+                    html = renderSnake(maxHoles, holeData);
+                    break;
+                case 'vegas':
+                    html = renderVegas(maxHoles, holeData);
+                    break;
+            }
+            
+            document.getElementById('gameContent').innerHTML = html;
+        };
+
+        function renderGameSettings(gameType) {
+            let html = '';
+            
+            if (gameType.includes('skins')) {
+                // Skins-specific settings with player selection
+                html += `
+                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
+                        <h4 style="margin: 0 0 15px 0;">⚙️ Skins Game Setup</h4>
+                        
+                        <!-- Player Selection for Skins -->
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; margin-bottom: 12px; font-weight: 700; font-size: 1.1em;">Select Players & Buy-In:</label>
+                            <div id="skinsPlayerSelection" style="display: flex; flex-direction: column; gap: 12px;">
+                                ${players.map((player, index) => `
+                                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 15px;">
+                                        <input type="checkbox" id="skinPlayer_${index}"
+                                            ${player.skinsEnabled !== false ? 'checked' : ''}
+                                            onchange="togglePlayerSkins(${index})"
+                                            style="width: 24px; height: 24px; cursor: pointer;">
+                                        
+                                        <div style="flex: 1;">
+                                            <div style="font-weight: 700; font-size: 1.1em;">${player.name}</div>
+                                            <div style="font-size: 0.9em; opacity: 0.8;">Handicap: ${player.handicap}</div>
+                                        </div>
+                                        
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <label style="font-weight: 600;">Type:</label>
+                                            <select id="skinType_${index}"
+                                                onchange="updatePlayerSkinsType(${index}, this.value)"
+                                                ${player.skinsEnabled === false ? 'disabled' : ''}
+                                                style="padding: 8px 12px; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); font-weight: 600;">
+                                                <option value="gross" ${player.skinsType === 'gross' ? 'selected' : ''}>Gross</option>
+                                                <option value="net" ${player.skinsType !== 'gross' ? 'selected' : ''}>Net</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <label style="font-weight: 600;">$</label>
+                                            <input type="number" id="skinBuyin_${index}"
+                                                value="${player.skinsBuyin || 5}"
+                                                min="1" step="1"
+                                                ${player.skinsEnabled === false ? 'disabled' : ''}
+                                                onchange="updatePlayerBuyin(${index}, this.value)"
+                                                style="width: 80px; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 1em; font-weight: 600; text-align: center;">
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <!-- Total Pot Display -->
+                        <div id="skinsPotTotal" style="background: rgba(74,222,128,0.2); padding: 15px; border-radius: 8px; text-align: center; border: 2px solid #4ade80;">
+                            <div style="font-size: 0.9em; opacity: 0.8; margin-bottom: 5px;">Total Skins Pot</div>
+                            <div style="font-size: 2em; font-weight: 800; color: #4ade80;">$<span id="totalPot">0</span></div>
+                        </div>
+                    </div>
+                `;
+            } else if (gameType === 'nassau' || gameType === 'bingo-bango-bongo' || gameType === 'wolf' || gameType === 'snake' || gameType === 'vegas') {
+                html += `
+                    <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">💵 Value per Point/Bet: $</label>
+                        <input type="number" id="gameValue" value="5" min="1" step="1" onchange="renderGame()"
+                            style="width: 100%; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 1em;">
+                    </div>
+                `;
+            }
+            
+            document.getElementById('gameSettings').innerHTML = html;
+            
+            // Update pot total if skins game
+            if (gameType.includes('skins')) {
+                updateSkinsPotTotal();
+            }
+        }
+
+        // Player skins management functions
+        window.togglePlayerSkins = function(playerIndex) {
+            const checkbox = document.getElementById(`skinPlayer_${playerIndex}`);
+            const typeSelect = document.getElementById(`skinType_${playerIndex}`);
+            const buyinInput = document.getElementById(`skinBuyin_${playerIndex}`);
+            
+            players[playerIndex].skinsEnabled = checkbox.checked;
+            typeSelect.disabled = !checkbox.checked;
+            buyinInput.disabled = !checkbox.checked;
+            
+            updateSkinsPotTotal();
+            renderGame();
+        };
+
+        window.updatePlayerSkinsType = function(playerIndex, type) {
+            players[playerIndex].skinsType = type;
+            renderGame();
+        };
+
+        window.updatePlayerBuyin = function(playerIndex, value) {
+            players[playerIndex].skinsBuyin = parseFloat(value) || 5;
+            updateSkinsPotTotal();
+            renderGame();
+        };
+
+        function updateSkinsPotTotal() {
+            let total = 0;
+            players.forEach(player => {
+                if (player.skinsEnabled !== false) {
+                    total += player.skinsBuyin || 5;
+                }
+            });
+            const potElement = document.getElementById('totalPot');
+            if (potElement) {
+                potElement.textContent = total.toFixed(2);
+            }
+        }
+
+        function renderStableford(maxHoles, holeData, modified = false) {
+            if (players.length === 0) {
+                return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Add players to see Stableford results</div>';
+            }
+            
+            let html = `
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(74,222,128,0.2); border-radius: 10px; border-left: 4px solid #4ade80;">
+                    <h3 style="margin: 0 0 10px 0;">📖 ${modified ? 'Modified ' : ''}Stableford Scoring</h3>
+                    <div style="font-size: 0.9em; opacity: 0.9;">
+                        ${modified ? `
+                            <strong>Modified Stableford Points:</strong><br>
+                            • Albatross (-3): 8 points<br>
+                            • Eagle (-2): 5 points<br>
+                            • Birdie (-1): 2 points<br>
+                            • Par (0): 0 points<br>
+                            • Bogey (+1): -1 point<br>
+                            • Double Bogey (+2): -3 points
+                        ` : `
+                            <strong>Standard Stableford Points:</strong><br>
+                            • Albatross (-3): 5 points<br>
+                            • Eagle (-2): 4 points<br>
+                            • Birdie (-1): 3 points<br>
+                            • Par (0): 2 points<br>
+                            • Bogey (+1): 1 point<br>
+                            • Double Bogey or worse: 0 points
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            // Calculate Stableford points for each player
+            let playerResults = players.map(player => {
+                let totalPoints = 0;
+                let frontNinePoints = 0;
+                let backNinePoints = 0;
+                let holePoints = [];
+                
+                for (let i = 1; i <= maxHoles; i++) {
+                    const score = player.scores?.[i];
+                    if (score) {
+                        const hole = holeData.find(h => h.number === i);
+                        const par = hole?.par || 4;
+                        const strokeIndex = hole?.strokeIndex || 10;
+                        const handicapStrokes = getHandicapStrokes(player.handicap, strokeIndex);
+                        const netScore = score - handicapStrokes;
+                        const scoreToPar = netScore - par;
+                        
+                        let points = 0;
+                        if (modified) {
+                            // Modified Stableford
+                            if (scoreToPar <= -3) points = 8;
+                            else if (scoreToPar === -2) points = 5;
+                            else if (scoreToPar === -1) points = 2;
+                            else if (scoreToPar === 0) points = 0;
+                            else if (scoreToPar === 1) points = -1;
+                            else if (scoreToPar >= 2) points = -3;
+                        } else {
+                            // Standard Stableford
+                            if (scoreToPar <= -3) points = 5;
+                            else if (scoreToPar === -2) points = 4;
+                            else if (scoreToPar === -1) points = 3;
+                            else if (scoreToPar === 0) points = 2;
+                            else if (scoreToPar === 1) points = 1;
+                            else points = 0;
+                        }
+                        
+                        totalPoints += points;
+                        if (i <= 9) {
+                            frontNinePoints += points;
+                        } else {
+                            backNinePoints += points;
+                        }
+                        holePoints.push({ hole: i, points, score, netScore, par });
+                    }
+                }
+                
+                return { player, totalPoints, frontNinePoints, backNinePoints, holePoints };
+            });
+            
+            // Sort by points (highest first)
+            playerResults.sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            const is18Holes = maxHoles === 18;
+            
+            // Scorecard-style table display
+            html += '<div style="overflow-x: auto;">';
+            
+            // Front 9 Table
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 20px;">';
+            html += '<thead><tr style="background: rgba(255,255,255,0.2);"><th colspan="12" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">⭐ Front Nine Stableford</th></tr></thead>';
+            
+            // Header row
+            html += '<tr style="background: rgba(255,255,255,0.2);">';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Hole</th>';
+            for (let i = 1; i <= 9; i++) {
+                html += `<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">${i}</th>`;
+            }
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">OUT</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(100,149,237,0.2);">PTS</th>';
+            html += '</tr>';
+            
+            // Par row
+            html += '<tr style="background: rgba(255,255,255,0.1);">';
+            html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+            for (let i = 1; i <= 9; i++) {
+                const hole = holeData.find(h => h.number === i);
+                const par = hole?.par || 4;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${par}</td>`;
+            }
+            html += '<td colspan="2"></td>';
+            html += '</tr>';
+            
+            // SI row
+            html += '<tr style="background: rgba(255,255,255,0.05);">';
+            html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">SI</td>';
+            for (let i = 1; i <= 9; i++) {
+                const hole = holeData.find(h => h.number === i);
+                const si = hole?.strokeIndex || '-';
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 0.85em; opacity: 0.7;">${si}</td>`;
+            }
+            html += '<td colspan="2"></td>';
+            html += '</tr>';
+            
+            // Player rows
+            playerResults.forEach(result => {
+                html += '<tr>';
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${result.player.name}<br><span style="font-size: 0.8em; opacity: 0.7;">HCP: ${result.player.handicap}</span></td>`;
+                
+                let frontGross = 0;
+                for (let i = 1; i <= 9; i++) {
+                    const holePoint = result.holePoints.find(hp => hp.hole === i);
+                    if (holePoint) {
+                        frontGross += holePoint.score;
+                        const hole = holeData.find(h => h.number === i);
+                        const strokeIndex = hole?.strokeIndex || 10;
+                        const handicapStrokes = getHandicapStrokes(result.player.handicap, strokeIndex);
+                        
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">`;
+                        html += `<div>${holePoint.score}</div>`;
+                        if (handicapStrokes > 0) {
+                            html += `<div style="font-size: 0.75em; opacity: 0.7;">(${holePoint.netScore})</div>`;
+                        }
+                        html += `</td>`;
+                    } else {
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">-</td>`;
+                    }
+                }
+                
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);">${frontGross || '-'}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; font-size: 1.2em; background: rgba(100,149,237,0.2); color: #4ade80;">${result.frontNinePoints}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            
+            // Back 9 Table (if 18 holes)
+            if (is18Holes) {
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 20px;">';
+                html += '<thead><tr style="background: rgba(255,255,255,0.2);"><th colspan="12" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">⭐ Back Nine Stableford</th></tr></thead>';
+                
+                // Header row
+                html += '<tr style="background: rgba(255,255,255,0.2);">';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Hole</th>';
+                for (let i = 10; i <= 18; i++) {
+                    html += `<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">${i}</th>`;
+                }
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">IN</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(100,149,237,0.2);">PTS</th>';
+                html += '</tr>';
+                
+                // Par row
+                html += '<tr style="background: rgba(255,255,255,0.1);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+                for (let i = 10; i <= 18; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    const par = hole?.par || 4;
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${par}</td>`;
+                }
+                html += '<td colspan="2"></td>';
+                html += '</tr>';
+                
+                // SI row
+                html += '<tr style="background: rgba(255,255,255,0.05);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">SI</td>';
+                for (let i = 10; i <= 18; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    const si = hole?.strokeIndex || '-';
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 0.85em; opacity: 0.7;">${si}</td>`;
+                }
+                html += '<td colspan="2"></td>';
+                html += '</tr>';
+                
+                // Player rows
+                playerResults.forEach(result => {
+                    html += '<tr>';
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${result.player.name}<br><span style="font-size: 0.8em; opacity: 0.7;">HCP: ${result.player.handicap}</span></td>`;
+                    
+                    let backGross = 0;
+                    for (let i = 10; i <= 18; i++) {
+                        const holePoint = result.holePoints.find(hp => hp.hole === i);
+                        if (holePoint) {
+                            backGross += holePoint.score;
+                            const hole = holeData.find(h => h.number === i);
+                            const strokeIndex = hole?.strokeIndex || 10;
+                            const handicapStrokes = getHandicapStrokes(result.player.handicap, strokeIndex);
+                            
+                            html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">`;
+                            html += `<div>${holePoint.score}</div>`;
+                            if (handicapStrokes > 0) {
+                                html += `<div style="font-size: 0.75em; opacity: 0.7;">(${holePoint.netScore})</div>`;
+                            }
+                            html += `</td>`;
+                        } else {
+                            html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">-</td>`;
+                        }
+                    }
+                    
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);">${backGross || '-'}</td>`;
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; font-size: 1.2em; background: rgba(100,149,237,0.2); color: #4ade80;">${result.backNinePoints}</td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</table>';
+            }
+            
+            // Totals Table
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+            html += '<thead><tr style="background: rgba(255,255,255,0.2);"><th colspan="5" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">🏆 Stableford Totals</th></tr></thead>';
+            html += '<tr style="background: rgba(255,255,255,0.2);">';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Position</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Player</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">OUT</th>';
+            if (is18Holes) {
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">IN</th>';
+            }
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">TOTAL PTS</th>';
+            html += '</tr>';
+            
+            playerResults.forEach((result, index) => {
+                const position = index + 1;
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
+                html += `<tr style="background: ${position === 1 ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.1)'};">`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 1.5em;">${medal}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${result.player.name}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700;">${result.frontNinePoints}</td>`;
+                if (is18Holes) {
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700;">${result.backNinePoints}</td>`;
+                }
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 800; font-size: 1.3em; background: rgba(74,222,128,0.2); color: #4ade80;">${result.totalPoints}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            html += '</div>';
+            
+            return html;
+        }
+
+        function renderSkins(maxHoles, holeData, defaultUseNet = false) {
+            // Filter active players in skins game
+            const activePlayers = players.filter(p => p.skinsEnabled !== false);
+            
+            if (activePlayers.length < 2) {
+                return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Need at least 2 players enabled for Skins game. Check the boxes above to add players.</div>';
+            }
+            
+            // Calculate total pot
+            let totalPot = 0;
+            activePlayers.forEach(p => {
+                totalPot += p.skinsBuyin || 5;
+            });
+            
+            const valuePerSkin = totalPot / maxHoles;
+            
+            let html = `
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,215,0,0.2); border-radius: 10px; border-left: 4px solid #fbbf24;">
+                    <h3 style="margin: 0 0 10px 0;">💰 Mixed Skins Game</h3>
+                    <div style="font-size: 0.9em; opacity: 0.9;">
+                        <strong>Active Players:</strong> ${activePlayers.map(p => `${p.name} (${p.skinsType || 'net'} - $${p.skinsBuyin || 5})`).join(', ')}<br>
+                        <strong>Total Pot:</strong> $${totalPot.toFixed(2)}<br>
+                        <strong>Value per Skin:</strong> $${valuePerSkin.toFixed(2)} (ties carry over)
+                    </div>
+                </div>
+            `;
+            
+            let skinWinners = {};
+            let carryOver = 0;
+            let playerWinnings = {};
+            activePlayers.forEach(p => playerWinnings[p.name] = 0);
+            
+            // Calculate skins for each hole
+            for (let i = 1; i <= maxHoles; i++) {
+                let holeScores = [];
+                activePlayers.forEach(player => {
+                    const score = player.scores?.[i];
+                    if (score) {
+                        const hole = holeData.find(h => h.number === i);
+                        const par = hole?.par || 4;
+                        const strokeIndex = hole?.strokeIndex || 10;
+                        const useNet = (player.skinsType || 'net') === 'net';
+                        const handicapStrokes = useNet ? getHandicapStrokes(player.handicap, strokeIndex) : 0;
+                        const finalScore = score - handicapStrokes;
+                        
+                        holeScores.push({
+                            player: player.name,
+                            score: finalScore,
+                            gross: score,
+                            netScore: finalScore,
+                            type: useNet ? 'Net' : 'Gross',
+                            handicapStrokes: handicapStrokes
+                        });
+                    }
+                });
+                
+                if (holeScores.length > 0) {
+                    holeScores.sort((a, b) => a.score - b.score);
+                    const lowestScore = holeScores[0].score;
+                    const winners = holeScores.filter(s => s.score === lowestScore);
+                    
+                    if (winners.length === 1) {
+                        const skinValue = valuePerSkin * (1 + carryOver);
+                        skinWinners[i] = {
+                            winner: winners[0].player,
+                            value: skinValue,
+                            score: winners[0].score,
+                            type: winners[0].type
+                        };
+                        playerWinnings[winners[0].player] += skinValue;
+                        carryOver = 0;
+                    } else {
+                        skinWinners[i] = { winner: 'TIE', value: 0, score: lowestScore };
+                        carryOver++;
+                    }
+                }
+            }
+            
+            const is18Holes = maxHoles === 18;
+            
+            // Scorecard-style table display
+            html += '<div style="overflow-x: auto;">';
+            
+            // Front 9 Skins Table
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 20px;">';
+            html += '<thead><tr style="background: rgba(255,215,0,0.2);"><th colspan="12" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">💰 Front Nine Skins</th></tr></thead>';
+            
+            // Header row
+            html += '<tr style="background: rgba(255,255,255,0.2);">';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Hole</th>';
+            for (let i = 1; i <= 9; i++) {
+                html += `<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">${i}</th>`;
+            }
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,215,0,0.2);">SKINS</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">$$$</th>';
+            html += '</tr>';
+            
+            // Par row
+            html += '<tr style="background: rgba(255,255,255,0.1);">';
+            html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+            for (let i = 1; i <= 9; i++) {
+                const hole = holeData.find(h => h.number === i);
+                const par = hole?.par || 4;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${par}</td>`;
+            }
+            html += '<td colspan="2"></td>';
+            html += '</tr>';
+            
+            // SI row
+            html += '<tr style="background: rgba(255,255,255,0.05);">';
+            html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">SI</td>';
+            for (let i = 1; i <= 9; i++) {
+                const hole = holeData.find(h => h.number === i);
+                const si = hole?.strokeIndex || '-';
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 0.85em; opacity: 0.7;">${si}</td>`;
+            }
+            html += '<td colspan="2"></td>';
+            html += '</tr>';
+            
+            // Player rows
+            let frontSkins = 0;
+            let frontWinnings = 0;
+            activePlayers.forEach(player => {
+                html += '<tr>';
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${player.name}<br><span style="font-size: 0.8em; opacity: 0.7;">${player.skinsType || 'net'}</span></td>`;
+                
+                let playerFrontSkins = 0;
+                let playerFrontWinnings = 0;
+                
+                for (let i = 1; i <= 9; i++) {
+                    const score = player.scores?.[i];
+                    const skin = skinWinners[i];
+                    const isWinner = skin && skin.winner === player.name;
+                    const isTie = skin && skin.winner === 'TIE';
+                    
+                    if (score) {
+                        const hole = holeData.find(h => h.number === i);
+                        const strokeIndex = hole?.strokeIndex || 10;
+                        const useNet = (player.skinsType || 'net') === 'net';
+                        const handicapStrokes = useNet ? getHandicapStrokes(player.handicap, strokeIndex) : 0;
+                        const netScore = score - handicapStrokes;
+                        
+                        // Circle winner's score
+                        const cellStyle = isWinner ?
+                            'background: rgba(255,215,0,0.3); border: 3px solid #fbbf24; box-shadow: 0 0 10px rgba(255,215,0,0.5);' :
+                            isTie ? 'background: rgba(255,255,255,0.1);' : '';
+                        
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; ${cellStyle}">`;
+                        html += `<div style="font-weight: ${isWinner ? '800' : '400'}; color: ${isWinner ? '#fbbf24' : 'white'};">${score}</div>`;
+                        if (handicapStrokes > 0) {
+                            html += `<div style="font-size: 0.75em; opacity: 0.7;">(${netScore})</div>`;
+                        }
+                        if (isWinner) {
+                            html += `<div style="font-size: 0.7em; color: #4ade80; font-weight: 700;">WIN</div>`;
+                            playerFrontSkins++;
+                            playerFrontWinnings += skin.value;
+                        } else if (isTie) {
+                            html += `<div style="font-size: 0.7em; color: #fbbf24;">TIE</div>`;
+                        }
+                        html += `</td>`;
+                    } else {
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">-</td>`;
+                    }
+                }
+                
+                frontSkins += playerFrontSkins;
+                frontWinnings += playerFrontWinnings;
+                
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(255,215,0,0.2);">${playerFrontSkins}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; font-size: 1.1em; background: rgba(74,222,128,0.2); color: #4ade80;">$${playerFrontWinnings.toFixed(2)}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            
+            // Back 9 Skins Table (if 18 holes)
+            if (is18Holes) {
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 20px;">';
+                html += '<thead><tr style="background: rgba(255,215,0,0.2);"><th colspan="12" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">💰 Back Nine Skins</th></tr></thead>';
+                
+                // Header row
+                html += '<tr style="background: rgba(255,255,255,0.2);">';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Hole</th>';
+                for (let i = 10; i <= 18; i++) {
+                    html += `<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">${i}</th>`;
+                }
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,215,0,0.2);">SKINS</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">$$$</th>';
+                html += '</tr>';
+                
+                // Par row
+                html += '<tr style="background: rgba(255,255,255,0.1);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+                for (let i = 10; i <= 18; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    const par = hole?.par || 4;
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${par}</td>`;
+                }
+                html += '<td colspan="2"></td>';
+                html += '</tr>';
+                
+                // SI row
+                html += '<tr style="background: rgba(255,255,255,0.05);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">SI</td>';
+                for (let i = 10; i <= 18; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    const si = hole?.strokeIndex || '-';
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 0.85em; opacity: 0.7;">${si}</td>`;
+                }
+                html += '<td colspan="2"></td>';
+                html += '</tr>';
+                
+                // Player rows
+                activePlayers.forEach(player => {
+                    html += '<tr>';
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${player.name}<br><span style="font-size: 0.8em; opacity: 0.7;">${player.skinsType || 'net'}</span></td>`;
+                    
+                    let playerBackSkins = 0;
+                    let playerBackWinnings = 0;
+                    
+                    for (let i = 10; i <= 18; i++) {
+                        const score = player.scores?.[i];
+                        const skin = skinWinners[i];
+                        const isWinner = skin && skin.winner === player.name;
+                        const isTie = skin && skin.winner === 'TIE';
+                        
+                        if (score) {
+                            const hole = holeData.find(h => h.number === i);
+                            const strokeIndex = hole?.strokeIndex || 10;
+                            const useNet = (player.skinsType || 'net') === 'net';
+                            const handicapStrokes = useNet ? getHandicapStrokes(player.handicap, strokeIndex) : 0;
+                            const netScore = score - handicapStrokes;
+                            
+                            const cellStyle = isWinner ?
+                                'background: rgba(255,215,0,0.3); border: 3px solid #fbbf24; box-shadow: 0 0 10px rgba(255,215,0,0.5);' :
+                                isTie ? 'background: rgba(255,255,255,0.1);' : '';
+                            
+                            html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; ${cellStyle}">`;
+                            html += `<div style="font-weight: ${isWinner ? '800' : '400'}; color: ${isWinner ? '#fbbf24' : 'white'};">${score}</div>`;
+                            if (handicapStrokes > 0) {
+                                html += `<div style="font-size: 0.75em; opacity: 0.7;">(${netScore})</div>`;
+                            }
+                            if (isWinner) {
+                                html += `<div style="font-size: 0.7em; color: #4ade80; font-weight: 700;">WIN</div>`;
+                                playerBackSkins++;
+                                playerBackWinnings += skin.value;
+                            } else if (isTie) {
+                                html += `<div style="font-size: 0.7em; color: #fbbf24;">TIE</div>`;
+                            }
+                            html += `</td>`;
+                        } else {
+                            html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">-</td>`;
+                        }
+                    }
+                    
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(255,215,0,0.2);">${playerBackSkins}</td>`;
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; font-size: 1.1em; background: rgba(74,222,128,0.2); color: #4ade80;">$${playerBackWinnings.toFixed(2)}</td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</table>';
+            }
+            
+            // Totals Table
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+            html += '<thead><tr style="background: rgba(255,215,0,0.2);"><th colspan="6" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">💵 Skins Summary</th></tr></thead>';
+            html += '<tr style="background: rgba(255,255,255,0.2);">';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Position</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Player</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Buy-In</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Skins Won</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Winnings</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">Profit/Loss</th>';
+            html += '</tr>';
+            
+            const sortedPlayers = Object.entries(playerWinnings).sort((a, b) => b[1] - a[1]);
+            sortedPlayers.forEach(([name, winnings], index) => {
+                const player = activePlayers.find(p => p.name === name);
+                const buyin = player?.skinsBuyin || 5;
+                const profit = winnings - buyin;
+                const position = index + 1;
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
+                
+                // Count skins won
+                let skinsWon = 0;
+                Object.values(skinWinners).forEach(skin => {
+                    if (skin.winner === name) skinsWon++;
+                });
+                
+                html += `<tr style="background: ${position === 1 ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.1)'};">`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 1.5em;">${medal}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${name}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">$${buyin.toFixed(2)}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700;">${skinsWon}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; color: #4ade80;">$${winnings.toFixed(2)}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 800; font-size: 1.2em; background: rgba(74,222,128,0.2); color: ${profit > 0 ? '#4ade80' : profit < 0 ? '#ef4444' : '#fbbf24'};">${profit > 0 ? '+' : ''}$${profit.toFixed(2)}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            html += '</div>';
+            
+            return html;
+        }
+
+        function renderNassau(maxHoles, holeData) {
+            if (players.length < 2) {
+                return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Need at least 2 players for Nassau</div>';
+            }
+            
+            const betValue = parseFloat(document.getElementById('gameValue')?.value || 5);
+            
+            let html = `
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(100,149,237,0.2); border-radius: 10px; border-left: 4px solid #6495ed;">
+                    <h3 style="margin: 0 0 10px 0;">🏆 Nassau (2-2-2)</h3>
+                    <div style="font-size: 0.9em; opacity: 0.9;">
+                        <strong>Format:</strong> Three separate bets - Front 9, Back 9, and Total 18<br>
+                        <strong>Value:</strong> $${betValue} per bet (Total: $${(betValue * 3).toFixed(2)} possible)
+                    </div>
+                </div>
+            `;
+            
+            // Calculate scores for front 9, back 9, and total
+            let playerScores = players.map(player => {
+                let front = 0, back = 0;
+                for (let i = 1; i <= maxHoles; i++) {
+                    const score = player.scores?.[i];
+                    if (score) {
+                        if (i <= 9) front += score;
+                        else back += score;
+                    }
+                }
+                return { player: player.name, front, back, total: front + back };
+            });
+            
+            playerScores.sort((a, b) => a.total - b.total);
+            
+            const frontWinner = playerScores.reduce((min, p) => p.front < min.front ? p : min);
+            const backWinner = maxHoles === 18 ? playerScores.reduce((min, p) => p.back < min.back ? p : min) : null;
+            const totalWinner = playerScores[0];
+            
+            html += '<div style="display: flex; flex-direction: column; gap: 15px;">';
+            
+            // Front 9
+            html += `
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px;">
+                    <h4 style="margin: 0 0 15px 0;">🏌️ Front 9 Winner</h4>
+                    <div style="font-size: 1.5em; font-weight: 800; color: #4ade80;">${frontWinner.player}</div>
+                    <div style="font-size: 1.2em; margin-top: 5px;">Score: ${frontWinner.front} • Wins: $${betValue.toFixed(2)}</div>
+                </div>
+            `;
+            
+            // Back 9 (if 18 holes)
+            if (maxHoles === 18 && backWinner) {
+                html += `
+                    <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px;">
+                        <h4 style="margin: 0 0 15px 0;">🏌️ Back 9 Winner</h4>
+                        <div style="font-size: 1.5em; font-weight: 800; color: #4ade80;">${backWinner.player}</div>
+                        <div style="font-size: 1.2em; margin-top: 5px;">Score: ${backWinner.back} • Wins: $${betValue.toFixed(2)}</div>
+                    </div>
+                `;
+            }
+            
+            // Total
+            html += `
+                <div style="background: rgba(74,222,128,0.2); padding: 20px; border-radius: 12px; border: 2px solid #4ade80;">
+                    <h4 style="margin: 0 0 15px 0;">🏆 Overall Winner</h4>
+                    <div style="font-size: 1.8em; font-weight: 800; color: #4ade80;">${totalWinner.player}</div>
+                    <div style="font-size: 1.2em; margin-top: 5px;">Total Score: ${totalWinner.total} • Wins: $${betValue.toFixed(2)}</div>
+                </div>
+            `;
+            
+            html += '</div>';
+            
+            return html;
+        }
+
+        function renderMatchPlay(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Match Play tracking coming soon!</div>';
+        }
+
+        function renderBestBall(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Best Ball tracking coming soon!</div>';
+        }
+
+        function renderScramble(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Scramble tracking coming soon!</div>';
+        }
+
+        function renderBingoBangoBongo(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Bingo Bango Bongo tracking coming soon!</div>';
+        }
+
+        function renderWolf(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Wolf game tracking coming soon!</div>';
+        }
+
+        function renderSnake(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Snake game tracking coming soon!</div>';
+        }
+
+        function renderVegas(maxHoles, holeData) {
+            return '<div style="text-align: center; padding: 40px; opacity: 0.7;">Las Vegas game tracking coming soon!</div>';
+        }
+
+        function renderScorecard() {
+            const maxHoles = selectedCourse ? selectedCourse.holes : 9;
+            const holeData = selectedCourse?.holeData || [];
+            const is18Holes = maxHoles === 18;
+            
+            let html = '<div style="overflow-x: auto;">';
+            
+            // Front 9
+            html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 20px;">';
+            html += '<thead><tr style="background: rgba(255,255,255,0.2);"><th colspan="12" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">Front Nine</th></tr></thead>';
+            
+            // Header row - Front 9
+            html += '<tr style="background: rgba(255,255,255,0.2);">';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Hole</th>';
+            for (let i = 1; i <= 9; i++) {
+                html += `<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">${i}</th>`;
+            }
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">OUT</th>';
+            html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(100,149,237,0.2);">OUT</th>';
+            html += '</tr>';
+            
+            // Par row - Front 9
+            html += '<tr style="background: rgba(255,255,255,0.1);">';
+            html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+            let frontPar = 0;
+            for (let i = 1; i <= 9; i++) {
+                const hole = holeData.find(h => h.number === i);
+                const par = hole?.par || 4;
+                frontPar += par;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${par}</td>`;
+            }
+            html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700;" colspan="2">${frontPar}</td>`;
+            html += '</tr>';
+            
+            // Stroke Index row - Front 9
+            html += '<tr style="background: rgba(255,255,255,0.05);">';
+            html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">SI</td>';
+            for (let i = 1; i <= 9; i++) {
+                const hole = holeData.find(h => h.number === i);
+                const si = hole?.strokeIndex || '-';
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 0.85em; opacity: 0.7;">${si}</td>`;
+            }
+            html += '<td colspan="2"></td>';
+            html += '</tr>';
+            
+            // Player rows - Front 9
+            if (players.length > 0) {
+                players.forEach(player => {
+                    html += '<tr>';
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${player.name}<br><span style="font-size: 0.8em; opacity: 0.7;">HCP: ${player.handicap}</span></td>`;
+                    let frontGross = 0;
+                    let frontNet = 0;
+                    for (let i = 1; i <= 9; i++) {
+                        const score = player.scores?.[i] || '-';
+                        if (score !== '-') frontGross += score;
+                        const hole = holeData.find(h => h.number === i);
+                        const par = hole?.par || 4;
+                        const strokeIndex = hole?.strokeIndex || 10;
+                        const handicapStrokes = getHandicapStrokes(player.handicap, strokeIndex);
+                        const netScore = score !== '-' ? score - handicapStrokes : '-';
+                        if (netScore !== '-') frontNet += netScore;
+                        
+                        let bgColor = 'transparent';
+                        if (netScore !== '-') {
+                            if (netScore === par - 2) bgColor = 'rgba(255,215,0,0.3)';
+                            else if (netScore === par - 1) bgColor = 'rgba(255,100,100,0.3)';
+                            else if (netScore === par + 1) bgColor = 'rgba(100,100,255,0.3)';
+                            else if (netScore > par + 1) bgColor = 'rgba(150,150,150,0.3)';
+                        }
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; background: ${bgColor};">`;
+                        html += `<div>${score}</div>`;
+                        if (score !== '-' && handicapStrokes > 0) {
+                            html += `<div style="font-size: 0.75em; opacity: 0.7;">(${netScore})</div>`;
+                        }
+                        html += `</td>`;
+                    }
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);">${frontGross || '-'}</td>`;
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(100,149,237,0.2);">${frontNet || '-'}</td>`;
+                    html += '</tr>';
+                });
+            } else {
+                // Solo play - Front 9
+                html += '<tr>';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">You</td>';
+                let frontTotal = 0;
+                for (let i = 1; i <= 9; i++) {
+                    const score = holeScores[i] || '-';
+                    if (score !== '-') frontTotal += score;
+                    const hole = holeData.find(h => h.number === i);
+                    const par = hole?.par || 4;
+                    let bgColor = 'transparent';
+                    if (score !== '-') {
+                        if (score === par - 2) bgColor = 'rgba(255,215,0,0.3)';
+                        else if (score === par - 1) bgColor = 'rgba(255,100,100,0.3)';
+                        else if (score === par + 1) bgColor = 'rgba(100,100,255,0.3)';
+                        else if (score > par + 1) bgColor = 'rgba(150,150,150,0.3)';
+                    }
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; background: ${bgColor};">${score}</td>`;
+                }
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);" colspan="2">${frontTotal || '-'}</td>`;
+                html += '</tr>';
+            }
+            
+            html += '</table>';
+            
+            // Back 9 (only for 18-hole courses)
+            if (is18Holes) {
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em; margin-bottom: 20px;">';
+                html += '<thead><tr style="background: rgba(255,255,255,0.2);"><th colspan="12" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">Back Nine</th></tr></thead>';
+                
+                // Header row - Back 9
+                html += '<tr style="background: rgba(255,255,255,0.2);">';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Hole</th>';
+                for (let i = 10; i <= 18; i++) {
+                    html += `<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">${i}</th>`;
+                }
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">IN</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(100,149,237,0.2);">IN</th>';
+                html += '</tr>';
+                
+                // Par row - Back 9
+                html += '<tr style="background: rgba(255,255,255,0.1);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+                let backPar = 0;
+                for (let i = 10; i <= 18; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    const par = hole?.par || 4;
+                    backPar += par;
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${par}</td>`;
+                }
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700;" colspan="2">${backPar}</td>`;
+                html += '</tr>';
+                
+                // Stroke Index row - Back 9
+                html += '<tr style="background: rgba(255,255,255,0.05);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">SI</td>';
+                for (let i = 10; i <= 18; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    const si = hole?.strokeIndex || '-';
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-size: 0.85em; opacity: 0.7;">${si}</td>`;
+                }
+                html += '<td colspan="2"></td>';
+                html += '</tr>';
+                
+                // Player rows - Back 9
+                if (players.length > 0) {
+                    players.forEach(player => {
+                        html += '<tr>';
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${player.name}<br><span style="font-size: 0.8em; opacity: 0.7;">HCP: ${player.handicap}</span></td>`;
+                        let backGross = 0;
+                        let backNet = 0;
+                        for (let i = 10; i <= 18; i++) {
+                            const score = player.scores?.[i] || '-';
+                            if (score !== '-') backGross += score;
+                            const hole = holeData.find(h => h.number === i);
+                            const par = hole?.par || 4;
+                            const strokeIndex = hole?.strokeIndex || 10;
+                            const handicapStrokes = getHandicapStrokes(player.handicap, strokeIndex);
+                            const netScore = score !== '-' ? score - handicapStrokes : '-';
+                            if (netScore !== '-') backNet += netScore;
+                            
+                            let bgColor = 'transparent';
+                            if (netScore !== '-') {
+                                if (netScore === par - 2) bgColor = 'rgba(255,215,0,0.3)';
+                                else if (netScore === par - 1) bgColor = 'rgba(255,100,100,0.3)';
+                                else if (netScore === par + 1) bgColor = 'rgba(100,100,255,0.3)';
+                                else if (netScore > par + 1) bgColor = 'rgba(150,150,150,0.3)';
+                            }
+                            html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; background: ${bgColor};">`;
+                            html += `<div>${score}</div>`;
+                            if (score !== '-' && handicapStrokes > 0) {
+                                html += `<div style="font-size: 0.75em; opacity: 0.7;">(${netScore})</div>`;
+                            }
+                            html += `</td>`;
+                        }
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);">${backGross || '-'}</td>`;
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(100,149,237,0.2);">${backNet || '-'}</td>`;
+                        html += '</tr>';
+                    });
+                } else {
+                    // Solo play - Back 9
+                    html += '<tr>';
+                    html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">You</td>';
+                    let backTotal = 0;
+                    for (let i = 10; i <= 18; i++) {
+                        const score = holeScores[i] || '-';
+                        if (score !== '-') backTotal += score;
+                        const hole = holeData.find(h => h.number === i);
+                        const par = hole?.par || 4;
+                        let bgColor = 'transparent';
+                        if (score !== '-') {
+                            if (score === par - 2) bgColor = 'rgba(255,215,0,0.3)';
+                            else if (score === par - 1) bgColor = 'rgba(255,100,100,0.3)';
+                            else if (score === par + 1) bgColor = 'rgba(100,100,255,0.3)';
+                            else if (score > par + 1) bgColor = 'rgba(150,150,150,0.3)';
+                        }
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; background: ${bgColor};">${score}</td>`;
+                    }
+                    html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);" colspan="2">${backTotal || '-'}</td>`;
+                    html += '</tr>';
+                }
+                
+                html += '</table>';
+                
+                // Total table
+                html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">';
+                html += '<thead><tr style="background: rgba(255,255,255,0.2);"><th colspan="5" style="padding: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1em;">18 Hole Totals</th></tr></thead>';
+                html += '<tr style="background: rgba(255,255,255,0.2);">';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">Player</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">OUT</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3);">IN</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(74,222,128,0.2);">Gross</th>';
+                html += '<th style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(100,149,237,0.2);">Net</th>';
+                html += '</tr>';
+                
+                // Par totals
+                html += '<tr style="background: rgba(255,255,255,0.1);">';
+                html += '<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">Par</td>';
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${frontPar}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${backPar}</td>`;
+                html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700;" colspan="2">${frontPar + backPar}</td>`;
+                html += '</tr>';
+                
+                // Player totals
+                if (players.length > 0) {
+                    players.forEach(player => {
+                        let frontGross = 0, frontNet = 0, backGross = 0, backNet = 0;
+                        for (let i = 1; i <= 18; i++) {
+                            const score = player.scores?.[i];
+                            if (score) {
+                                const hole = holeData.find(h => h.number === i);
+                                const strokeIndex = hole?.strokeIndex || 10;
+                                const handicapStrokes = getHandicapStrokes(player.handicap, strokeIndex);
+                                const netScore = score - handicapStrokes;
+                                
+                                if (i <= 9) {
+                                    frontGross += score;
+                                    frontNet += netScore;
+                                } else {
+                                    backGross += score;
+                                    backNet += netScore;
+                                }
+                            }
+                        }
+                        html += '<tr>';
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700;">${player.name}</td>`;
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${frontGross || '-'} / ${frontNet || '-'}</td>`;
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center;">${backGross || '-'} / ${backNet || '-'}</td>`;
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(74,222,128,0.2);">${(frontGross + backGross) || '-'}</td>`;
+                        html += `<td style="padding: 10px; border: 1px solid rgba(255,255,255,0.3); text-align: center; font-weight: 700; background: rgba(100,149,237,0.2);">${(frontNet + backNet) || '-'}</td>`;
+                        html += '</tr>';
+                    });
+                }
+                
+                html += '</table>';
+            }
+            
+            html += '</div>';
+            
+            // Legend
+            html += '<div style="margin-top: 20px; font-size: 0.85em; opacity: 0.8;">';
+            html += '<div style="display: flex; gap: 15px; flex-wrap: wrap;">';
+            html += '<div><span style="display: inline-block; width: 20px; height: 20px; background: rgba(255,215,0,0.3); border: 1px solid white; margin-right: 5px;"></span>Eagle</div>';
+            html += '<div><span style="display: inline-block; width: 20px; height: 20px; background: rgba(255,100,100,0.3); border: 1px solid white; margin-right: 5px;"></span>Birdie</div>';
+            html += '<div><span style="display: inline-block; width: 20px; height: 20px; background: rgba(100,100,255,0.3); border: 1px solid white; margin-right: 5px;"></span>Bogey</div>';
+            html += '<div><span style="display: inline-block; width: 20px; height: 20px; background: rgba(150,150,150,0.3); border: 1px solid white; margin-right: 5px;"></span>Double+</div>';
+            html += '</div></div>';
+            
+            document.getElementById('scorecardContent').innerHTML = html;
+        }
+
+        function renderLeaderboard() {
+            const maxHoles = selectedCourse ? selectedCourse.holes : 9;
+            const holeData = selectedCourse?.holeData || [];
+            
+            let leaderboardData = [];
+            
+            if (players.length > 0) {
+                players.forEach(player => {
+                    let grossTotal = 0;
+                    let netTotal = 0;
+                    let holesPlayed = 0;
+                    for (let i = 1; i <= maxHoles; i++) {
+                        const score = player.scores?.[i];
+                        if (score) {
+                            grossTotal += score;
+                            holesPlayed++;
+                            
+                            // Calculate net score
+                            const hole = holeData.find(h => h.number === i);
+                            const strokeIndex = hole?.strokeIndex || 10;
+                            const handicapStrokes = getHandicapStrokes(player.handicap, strokeIndex);
+                            netTotal += (score - handicapStrokes);
+                        }
+                    }
+                    
+                    let totalPar = 0;
+                    for (let i = 1; i <= holesPlayed; i++) {
+                        const hole = holeData.find(h => h.number === i);
+                        totalPar += hole?.par || 4;
+                    }
+                    
+                    const grossToPar = grossTotal - totalPar;
+                    const netToPar = netTotal - totalPar;
+                    leaderboardData.push({
+                        name: player.name,
+                        handicap: player.handicap,
+                        grossTotal: grossTotal,
+                        netTotal: netTotal,
+                        holesPlayed: holesPlayed,
+                        grossToPar: grossToPar,
+                        netToPar: netToPar
+                    });
+                });
+            } else {
+                // Solo play
+                let total = 0;
+                let holesPlayed = 0;
+                for (let i = 1; i <= maxHoles; i++) {
+                    const score = holeScores[i];
+                    if (score) {
+                        total += score;
+                        holesPlayed++;
+                    }
+                }
+                
+                let totalPar = 0;
+                for (let i = 1; i <= holesPlayed; i++) {
+                    const hole = holeData.find(h => h.number === i);
+                    totalPar += hole?.par || 4;
+                }
+                
+                const toPar = total - totalPar;
+                leaderboardData.push({
+                    name: 'You',
+                    handicap: 0,
+                    total: total,
+                    holesPlayed: holesPlayed,
+                    toPar: toPar
+                });
+            }
+            
+            // Sort by net score (lowest first)
+            leaderboardData.sort((a, b) => a.netTotal - b.netTotal);
+            
+            let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
+            
+            leaderboardData.forEach((player, index) => {
+                const position = index + 1;
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `${position}.`;
+                const netToParText = player.netToPar > 0 ? `+${player.netToPar}` : player.netToPar === 0 ? 'E' : player.netToPar;
+                const grossToParText = player.grossToPar > 0 ? `+${player.grossToPar}` : player.grossToPar === 0 ? 'E' : player.grossToPar;
+                const toParColor = player.netToPar < 0 ? '#4ade80' : player.netToPar === 0 ? '#fbbf24' : '#ef4444';
+                
+                html += `
+                    <div style="background: ${position === 1 ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.1)'}; border-radius: 12px; padding: 20px; border: 2px solid ${position === 1 ? '#4ade80' : 'transparent'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="font-size: 2em;">${medal}</div>
+                                <div>
+                                    <div style="font-size: 1.3em; font-weight: 700;">${player.name}</div>
+                                    <div style="font-size: 0.9em; opacity: 0.8;">Handicap: ${player.handicap} • ${player.holesPlayed} holes</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.8em; font-weight: 800; color: ${toParColor};">
+                                    Net: ${player.netTotal || '-'}
+                                    <span style="font-size: 0.6em; font-weight: 700;">${netToParText}</span>
+                                </div>
+                                <div style="font-size: 1.2em; font-weight: 600; opacity: 0.7; margin-top: 5px;">
+                                    Gross: ${player.grossTotal || '-'}
+                                    <span style="font-size: 0.8em;">${grossToParText}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            document.getElementById('leaderboardContent').innerHTML = html;
+        }
+
+        window.previousHole = function() {
+            if (currentHole > 1) {
+                currentHole--;
+                shots = shots.filter(s => s.hole !== currentHole + 1); // Remove shots from next hole
+                detectedHole = null;
+                updateHoleDisplay();
+                updateShotList();
+                updateGPSDisplay();
+                updatePlayerScores();
+                
+                // Update score display for solo play
+                if (players.length === 0) {
+                    const score = holeScores[currentHole];
+                    document.getElementById('holeScore').textContent = score || '-';
+                }
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }
+        };
+
+        window.changeCourse = function() {
+            if (confirm('Change course? Your current progress will be lost.')) {
+                currentHole = 1;
+                shots = [];
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+                elements.gpsTrackingScreen.classList.remove('active');
+                elements.courseSelectionScreen.classList.add('active');
+                elements.bottomNav.style.display = 'none';
+                elements.headerSubtitle.textContent = 'Select Your Course';
+            }
+        };
+
+        // Search functionality
+        elements.searchBox.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.course-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a472a">
+    <title>Professional Golf Scoring System</title>
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        :root {
+            --golf-green: #1a472a;
+            --golf-green-light: #2d5a3d;
+            --golf-gold: #d4af37;
+            --golf-gold-light: #e5c158;
+            --golf-cream: #f8f6f0;
+            --golf-white: #ffffff;
+            --golf-gray: #4a5568;
+            --golf-gray-light: #cbd5e0;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+            --shadow-xl: 0 16px 48px rgba(0,0,0,0.2);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a2817 0%, #1a472a 50%, #2d5a3d 100%);
+            background-attachment: fixed;
+            color: var(--golf-gray);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        /* Subtle golf course pattern overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Premium Header */
+        header {
+            background: linear-gradient(135deg, var(--golf-white) 0%, var(--golf-cream) 100%);
+            padding: 40px 35px;
+            border-radius: 24px;
+            box-shadow: var(--shadow-xl);
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--golf-gold) 0%, var(--golf-gold-light) 50%, var(--golf-gold) 100%);
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .logo-icon {
+            font-size: 48px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--golf-green) 0%, var(--golf-green-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        
+        .subtitle {
+            color: var(--golf-gray);
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--golf-gray-light);
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        
+        .status-synced {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+        }
+        
+        .status-offline {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #991b1b;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+        
+        .status-syncing {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+        }
+        
+        /* Premium Cards */
+        .card {
+            background: var(--golf-white);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 25px;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--golf-green);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--golf-gold);
+        }
+        
+        .section-icon {
+            font-size: 28px;
+        }
+        
+        /* Premium Form Elements */
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            color: var(--golf-green);
+            margin-bottom: 10px;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid var(--golf-gray-light);
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            background: var(--golf-white);
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--golf-gold);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
+            background: var(--golf-cream);
+        }
+        
+        /* Premium Scorecard */
+        .scorecard-container {
+            background: linear-gradient(135deg, var(--golf-cream) 0%, var(--golf-white) 100%);
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 20px;
+            border: 2px solid var(--golf-gold);
+        }
+        
+        .hole-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .hole-input {
+            text-align: center;
+            background: var(--golf-white);
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+        }
+        
+        .hole-input:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .hole-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--golf-green);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .hole-input input {
+            text-align: center;
+            font-weight: 700;
+            font-size: 22px;
+            color: var(--golf-green);
+            border: 2px solid var(--golf-gold);
+            padding: 10px;
+        }
+        
+        .hole-input input:focus {
+            border-color: var(--golf-green);
+            background: var(--golf-gold-light);
+            color: var(--golf-green);
+        }
+        
+        /* Premium Buttons */
+        .btn {
+            width: 100%;
+            padding: 18px 24px;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--golf-green) 0%, var(--golf-green-light) 100%);
+            color: var(--golf-gold);
+            box-shadow: 0 6px 20px rgba(26, 71, 42, 0.4);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(26, 71, 42, 0.5);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--golf-cream) 0%, var(--golf-gray-light) 100%);
+            color: var(--golf-green);
+            margin-top: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, var(--golf-gray-light) 0%, var(--golf-cream) 100%);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        /* Premium Total Score Display */
+        .total-score {
+            font-family: 'Playfair Display', serif;
+            font-size: 48px;
+            font-weight: 900;
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, var(--golf-gold) 0%, var(--golf-gold-light) 100%);
+            color: var(--golf-green);
+            border-radius: 16px;
+            margin-top: 25px;
+            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.3);
+            border: 3px solid var(--golf-green);
+            letter-spacing: -1px;
+        }
+        
+        .total-label {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+        
+        /* Premium Leaderboard */
+        .leaderboard {
+            background: var(--golf-white);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        .player-item {
+            padding: 18px 20px;
+            background: linear-gradient(135deg, var(--golf-cream) 0%, var(--golf-white) 100%);
+            border-bottom: 1px solid var(--golf-gray-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .player-item:hover {
+            background: linear-gradient(135deg, var(--golf-gold-light) 0%, var(--golf-gold) 100%);
+            transform: translateX(5px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .player-item:first-child {
+            background: linear-gradient(135deg, var(--golf-gold) 0%, var(--golf-gold-light) 100%);
+            border-bottom: 3px solid var(--golf-green);
+        }
+        
+        .player-rank {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--golf-green);
+            margin-right: 15px;
+            min-width: 40px;
+        }
+        
+        .player-name {
+            font-weight: 600;
+            color: var(--golf-green);
+            font-size: 16px;
+            flex: 1;
+        }
+        
+        .player-score {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--golf-green);
+        }
+        
+        /* Premium Alerts */
+        .alert {
+            padding: 18px 22px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .alert-icon {
+            font-size: 24px;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            border-left: 4px solid #059669;
+        }
+        
+        /* Loading States */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--golf-gray);
+        }
+        
+        .spinner {
+            border: 4px solid var(--golf-gray-light);
+            border-top: 4px solid var(--golf-gold);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            header { padding: 30px 25px; }
+            h1 { font-size: 32px; }
+            .card { padding: 25px; }
+            .hole-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+            .total-score { font-size: 36px; padding: 25px; }
+            .section-title { font-size: 22px; }
+        }
+        
+        @media (max-width: 480px) {
+            h1 { font-size: 28px; }
+            .logo-icon { font-size: 36px; }
+            .hole-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-section">
+                <span class="logo-icon">⛳</span>
+                <h1>Professional Golf Scoring</h1>
+            </div>
+            <p class="subtitle">World-Class Tournament Management System</p>
+            <div class="status-bar">
+                <span id="syncStatus" class="status-badge status-offline">
+                    <span>●</span> Connecting...
+                </span>
+            </div>
+        </header>
+
+        <div id="setupSection" class="card">
+            <h2 class="section-title">
+                <span class="section-icon">🎯</span>
+                Tournament Selection
+            </h2>
+            
+            <div class="form-group">
+                <label for="eventSelect">Select Your Tournament</label>
+                <select id="eventSelect">
+                    <option value="">Loading tournaments...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="playerName">Player Name</label>
+                <input type="text" id="playerName" placeholder="Enter your full name" autocomplete="name">
+            </div>
+            
+            <button class="btn btn-primary" onclick="startScoring()">
+                <span style="position: relative; z-index: 1;">Begin Round</span>
+            </button>
+        </div>
+
+        <div id="scoringSection" style="display: none;">
+            <div class="card">
+                <h2 class="section-title">
+                    <span class="section-icon">📝</span>
+                    Score Entry
+                    <span id="playerNameDisplay" style="margin-left: auto; color: var(--golf-gold); font-size: 20px;"></span>
+                </h2>
+                
+                <div class="alert alert-info">
+                    <span class="alert-icon">💡</span>
+                    <span>Enter your score for each hole. Your scores sync automatically across all devices in real-time.</span>
+                </div>
+                
+                <div class="scorecard-container">
+                    <div id="holesContainer"></div>
+                    
+                    <div class="total-score" id="totalScore">
+                        <div class="total-label">Total Score</div>
+                        <div>0</div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveScores()">
+                    <span style="position: relative; z-index: 1;">💾 Save Round</span>
+                </button>
+                <button class="btn btn-secondary" onclick="backToSetup()">
+                    <span style="position: relative; z-index: 1;">← Back to Selection</span>
+                </button>
+            </div>
+            
+            <div class="card">
+                <h2 class="section-title">
+                    <span class="section-icon">🏆</span>
+                    Live Leaderboard
+                </h2>
+                <div id="leaderboard" class="leaderboard">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading tournament standings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Config -->
+    <script src="firebase-config.js"></script>
+    
+    <script>
+        let currentEvent = null;
+        let currentPlayer = null;
+        let scores = {};
+        let leaderboardRef = null;
+
+        // Check Firebase connection
+        function checkFirebaseConnection() {
+            const connectedRef = firebase.database().ref('.info/connected');
+            connectedRef.on('value', (snap) => {
+                const status = document.getElementById('syncStatus');
+                if (snap.val() === true) {
+                    status.innerHTML = '<span>●</span> Connected';
+                    status.className = 'status-badge status-synced';
+                } else {
+                    status.innerHTML = '<span>●</span> Offline';
+                    status.className = 'status-badge status-offline';
+                }
+            });
+        }
+
+        // Load events from Firebase
+        function loadEvents() {
+            const eventsRef = firebase.database().ref('events');
+            eventsRef.on('value', (snapshot) => {
+                const events = snapshot.val();
+                const select = document.getElementById('eventSelect');
+                select.innerHTML = '<option value="">-- Select a Tournament --</option>';
+                
+                if (events) {
+                    Object.keys(events).forEach(eventId => {
+                        const event = events[eventId];
+                        const option = document.createElement('option');
+                        option.value = eventId;
+                        option.textContent = `${event.name} - ${event.course}`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">No tournaments available</option>';
+                }
+            });
+        }
+
+        // Start scoring
+        function startScoring() {
+            const eventId = document.getElementById('eventSelect').value;
+            const playerName = document.getElementById('playerName').value.trim();
+            
+            if (!eventId) {
+                alert('Please select a tournament');
+                return;
+            }
+            
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            currentEvent = eventId;
+            currentPlayer = playerName;
+            
+            // Load event details
+            firebase.database().ref(`events/${eventId}`).once('value', (snapshot) => {
+                const event = snapshot.val();
+                if (event) {
+                    document.getElementById('setupSection').style.display = 'none';
+                    document.getElementById('scoringSection').style.display = 'block';
+                    document.getElementById('playerNameDisplay').textContent = playerName;
+                    
+                    createHoleInputs(event.holes || 18);
+                    loadPlayerScores();
+                    setupLeaderboard();
+                }
+            });
+        }
+
+        // Create hole inputs
+        function createHoleInputs(numHoles) {
+            const container = document.getElementById('holesContainer');
+            container.innerHTML = '<div class="hole-grid"></div>';
+            const grid = container.querySelector('.hole-grid');
+            
+            for (let i = 1; i <= numHoles; i++) {
+                const holeDiv = document.createElement('div');
+                holeDiv.className = 'hole-input';
+                holeDiv.innerHTML = `
+                    <div class="hole-label">Hole ${i}</div>
+                    <input type="number" id="hole${i}" min="1" max="15" 
+                           onchange="updateTotal()" placeholder="-" inputmode="numeric">
+                `;
+                grid.appendChild(holeDiv);
+            }
+        }
+
+        // Load player's existing scores
+        function loadPlayerScores() {
+            const scoresRef = firebase.database().ref(`events/${currentEvent}/scores/${sanitizeKey(currentPlayer)}`);
+            scoresRef.on('value', (snapshot) => {
+                const playerScores = snapshot.val();
+                if (playerScores && playerScores.holes) {
+                    Object.keys(playerScores.holes).forEach(hole => {
+                        const input = document.getElementById(`hole${hole}`);
+                        if (input) {
+                            input.value = playerScores.holes[hole];
+                        }
+                    });
+                    updateTotal();
+                }
+            });
+        }
+
+        // Update total score
+        function updateTotal() {
+            let total = 0;
+            const inputs = document.querySelectorAll('.hole-input input');
+            inputs.forEach(input => {
+                const value = parseInt(input.value);
+                if (!isNaN(value)) {
+                    total += value;
+                }
+            });
+            document.getElementById('totalScore').innerHTML = `
+                <div class="total-label">Total Score</div>
+                <div>${total}</div>
+            `;
+        }
+
+        // Save scores to Firebase
+        function saveScores() {
+            const status = document.getElementById('syncStatus');
+            status.innerHTML = '<span>●</span> Syncing...';
+            status.className = 'status-badge status-syncing';
+            
+            const holes = {};
+            const inputs = document.querySelectorAll('.hole-input input');
+            let total = 0;
+            
+            inputs.forEach((input, index) => {
+                const value = parseInt(input.value);
+                if (!isNaN(value)) {
+                    holes[index + 1] = value;
+                    total += value;
+                }
+            });
+            
+            const scoreData = {
+                playerName: currentPlayer,
+                holes: holes,
+                total: total,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            firebase.database().ref(`events/${currentEvent}/scores/${sanitizeKey(currentPlayer)}`)
+                .set(scoreData)
+                .then(() => {
+                    status.innerHTML = '<span>●</span> Saved';
+                    status.className = 'status-badge status-synced';
+                    
+                    // Show success message
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.innerHTML = '<span class="alert-icon">✓</span><span>Round saved successfully!</span>';
+                    document.querySelector('#scoringSection .card').insertBefore(
+                        alert, 
+                        document.querySelector('.scorecard-container')
+                    );
+                    setTimeout(() => alert.remove(), 3000);
+                })
+                .catch((error) => {
+                    alert('Error saving scores: ' + error.message);
+                    status.innerHTML = '<span>●</span> Error';
+                    status.className = 'status-badge status-offline';
+                });
+        }
+
+        // Setup live leaderboard
+        function setupLeaderboard() {
+            if (leaderboardRef) {
+                leaderboardRef.off();
+            }
+            
+            leaderboardRef = firebase.database().ref(`events/${currentEvent}/scores`);
+            leaderboardRef.on('value', (snapshot) => {
+                const scores = snapshot.val();
+                const leaderboard = document.getElementById('leaderboard');
+                
+                if (!scores) {
+                    leaderboard.innerHTML = '<div class="loading"><p style="color: var(--golf-gray);">No scores yet. Be the first to enter!</p></div>';
+                    return;
+                }
+                
+                // Convert to array and sort
+                const players = Object.values(scores).sort((a, b) => a.total - b.total);
+                
+                leaderboard.innerHTML = players.map((player, index) => `
+                    <div class="player-item">
+                        <span class="player-rank">#${index + 1}</span>
+                        <span class="player-name">${player.playerName}</span>
+                        <span class="player-score">${player.total || 0}</span>
+                    </div>
+                `).join('');
+            });
+        }
+
+        // Back to setup
+        function backToSetup() {
+            if (leaderboardRef) {
+                leaderboardRef.off();
+            }
+            document.getElementById('setupSection').style.display = 'block';
+            document.getElementById('scoringSection').style.display = 'none';
+            currentEvent = null;
+            currentPlayer = null;
+        }
+
+        // Sanitize Firebase key
+        function sanitizeKey(key) {
+            return key.replace(/[.#$[\]]/g, '_');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            checkFirebaseConnection();
+            loadEvents();
+        });
+    </script>
+</body>
+</html>

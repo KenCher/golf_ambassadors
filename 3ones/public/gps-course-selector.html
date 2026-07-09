@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Golf4us GPS - Course Selector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .gps-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            margin-top: 8px;
+            color: #4ade80;
+        }
+
+        .gps-status.inactive {
+            color: #f87171;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .course-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .course-card:active {
+            transform: scale(0.98);
+        }
+
+        .course-card.selected {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .course-card.closest {
+            border-color: #4ade80;
+        }
+
+        .course-name {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .course-location {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .course-details {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .course-distance {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+            color: #4ade80;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-closest {
+            background: #4ade80;
+            color: #0f2027;
+        }
+
+        .badge-selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            opacity: 0.7;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⛳ Select Your Course</h1>
+        <div class="gps-status" id="gpsStatus">
+            <span class="status-dot"></span>
+            <span id="statusText">Detecting location...</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px;">Finding nearby courses...</p>
+        </div>
+
+        <!-- Course Selection -->
+        <div id="courseSelection" class="hidden">
+            <div class="info-box">
+                📍 We found courses near your location. Select one to start playing!
+            </div>
+
+            <!-- Search Box -->
+            <input 
+                type="text" 
+                id="searchBox" 
+                class="search-box" 
+                placeholder="🔍 Search courses..."
+            >
+
+            <!-- Nearby Courses -->
+            <div class="section">
+                <div class="section-title">
+                    📍 Nearby Courses
+                </div>
+                <div id="courseList"></div>
+            </div>
+
+            <!-- All Courses -->
+            <div class="section">
+                <div class="section-title">
+                    🏌️ All Courses
+                </div>
+                <div id="allCoursesList"></div>
+            </div>
+
+            <!-- Action Buttons -->
+            <button class="btn btn-primary" id="startPlayingBtn" disabled>
+                Start Playing
+            </button>
+            <button class="btn btn-secondary" id="manualEntryBtn">
+                Enter Course Manually
+            </button>
+        </div>
+
+        <!-- No Courses Found -->
+        <div id="noCoursesState" class="hidden">
+            <div class="empty-state">
+                <div class="empty-state-icon">🏌️</div>
+                <h2>No Courses Found</h2>
+                <p style="margin-top: 10px;">We couldn't find any courses near your location.</p>
+            </div>
+            <button class="btn btn-secondary" id="manualEntryBtn2">
+                Enter Course Manually
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Course Finder Implementation
+        class CourseFinder {
+            constructor() {
+                this.courses = [
+                    {
+                        id: 'pebble-beach',
+                        name: 'Pebble Beach Golf Links',
+                        location: { lat: 36.5674, lon: -121.9500 },
+                        city: 'Pebble Beach',
+                        state: 'CA',
+                        holes: 18,
+                        par: 72
+                    },
+                    {
+                        id: 'augusta-national',
+                        name: 'Augusta National Golf Club',
+                        location: { lat: 33.5030, lon: -82.0200 },
+                        city: 'Augusta',
+                        state: 'GA',
+                        holes: 18,
+                        par: 72
+                    },
+                    {
+                        id: 'pinehurst-no2',
+                        name: 'Pinehurst No. 2',
+                        location: { lat: 35.1895, lon: -79.4689 },
+                        city: 'Pinehurst',
+                        state: 'NC',
+                        holes: 18,
+                        par: 72
+                    },
+                    {
+                        id: 'torrey-pines',
+                        name: 'Torrey Pines Golf Course',
+                        location: { lat: 32.8989, lon: -117.2521 },
+                        city: 'La Jolla',
+                        state: 'CA',
+                        holes: 18,
+                        par: 72
+                    },
+                    {
+                        id: 'bethpage-black',
+                        name: 'Bethpage Black Course',
+                        location: { lat: 40.7445, lon: -73.4577 },
+                        city: 'Farmingdale',
+                        state: 'NY',
+                        holes: 18,
+                        par: 71
+                    }
+                ];
+            }
+
+            calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 3959;
+                const φ1 = lat1 * Math.PI / 180;
+                const φ2 = lat2 * Math.PI / 180;
+                const Δφ = (lat2 - lat1) * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+                const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                          Math.cos(φ1) * Math.cos(φ2) *
+                          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+                return R * c;
+            }
+
+            findNearbyCourses(currentLat, currentLon, maxDistance = 50) {
+                const nearbyCourses = this.courses.map(course => {
+                    const distance = this.calculateDistance(
+                        currentLat,
+                        currentLon,
+                        course.location.lat,
+                        course.location.lon
+                    );
+
+                    return {
+                        ...course,
+                        distance: distance,
+                        distanceText: distance < 1 
+                            ? `${(distance * 5280).toFixed(0)} ft`
+                            : `${distance.toFixed(1)} mi`
+                    };
+                });
+
+                return nearbyCourses
+                    .filter(course => course.distance <= maxDistance)
+                    .sort((a, b) => a.distance - b.distance);
+            }
+
+            searchCourses(query) {
+                const lowerQuery = query.toLowerCase();
+                return this.courses.filter(course => 
+                    course.name.toLowerCase().includes(lowerQuery) ||
+                    course.city.toLowerCase().includes(lowerQuery) ||
+                    course.state.toLowerCase().includes(lowerQuery)
+                );
+            }
+        }
+
+        // App State
+        let courseFinder = new CourseFinder();
+        let currentPosition = null;
+        let selectedCourse = null;
+        let nearbyCourses = [];
+        let allCourses = [];
+
+        // UI Elements
+        const elements = {
+            gpsStatus: document.getElementById('gpsStatus'),
+            statusText: document.getElementById('statusText'),
+            loadingState: document.getElementById('loadingState'),
+            courseSelection: document.getElementById('courseSelection'),
+            noCoursesState: document.getElementById('noCoursesState'),
+            courseList: document.getElementById('courseList'),
+            allCoursesList: document.getElementById('allCoursesList'),
+            searchBox: document.getElementById('searchBox'),
+            startPlayingBtn: document.getElementById('startPlayingBtn'),
+            manualEntryBtn: document.getElementById('manualEntryBtn'),
+            manualEntryBtn2: document.getElementById('manualEntryBtn2')
+        };
+
+        // Initialize
+        async function init() {
+            try {
+                // Get GPS position
+                const position = await getCurrentPosition();
+                currentPosition = position.coords;
+
+                elements.gpsStatus.classList.remove('inactive');
+                elements.statusText.textContent = 'Location detected';
+
+                // Find nearby courses
+                nearbyCourses = courseFinder.findNearbyCourses(
+                    currentPosition.latitude,
+                    currentPosition.longitude,
+                    50
+                );
+
+                allCourses = courseFinder.courses.map(course => ({
+                    ...course,
+                    distance: courseFinder.calculateDistance(
+                        currentPosition.latitude,
+                        currentPosition.longitude,
+                        course.location.lat,
+                        course.location.lon
+                    )
+                })).sort((a, b) => a.distance - b.distance);
+
+                // Show results
+                elements.loadingState.classList.add('hidden');
+                
+                if (nearbyCourses.length > 0) {
+                    elements.courseSelection.classList.remove('hidden');
+                    renderCourses();
+                } else {
+                    elements.noCoursesState.classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error('GPS error:', error);
+                elements.gpsStatus.classList.add('inactive');
+                elements.statusText.textContent = 'GPS unavailable';
+                elements.loadingState.classList.add('hidden');
+                elements.noCoursesState.classList.remove('hidden');
+            }
+        }
+
+        function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+            });
+        }
+
+        function renderCourses() {
+            // Render nearby courses
+            if (nearbyCourses.length > 0) {
+                elements.courseList.innerHTML = nearbyCourses.map((course, index) => `
+                    <div class="course-card ${index === 0 ? 'closest' : ''}" data-course-id="${course.id}">
+                        <div class="course-name">
+                            ${course.name}
+                            ${index === 0 ? '<span class="badge badge-closest">Closest</span>' : ''}
+                        </div>
+                        <div class="course-location">${course.city}, ${course.state}</div>
+                        <div class="course-details">
+                            <span>${course.holes} holes • Par ${course.par}</span>
+                            <span class="course-distance">📍 ${course.distanceText}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render all courses
+            elements.allCoursesList.innerHTML = allCourses.map(course => `
+                <div class="course-card" data-course-id="${course.id}">
+                    <div class="course-name">${course.name}</div>
+                    <div class="course-location">${course.city}, ${course.state}</div>
+                    <div class="course-details">
+                        <span>${course.holes} holes • Par ${course.par}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.course-card').forEach(card => {
+                card.addEventListener('click', () => selectCourse(card.dataset.courseId));
+            });
+        }
+
+        function selectCourse(courseId) {
+            selectedCourse = courseFinder.courses.find(c => c.id === courseId);
+            
+            // Update UI
+            document.querySelectorAll('.course-card').forEach(card => {
+                card.classList.remove('selected');
+                if (card.dataset.courseId === courseId) {
+                    card.classList.add('selected');
+                }
+            });
+
+            elements.startPlayingBtn.disabled = false;
+        }
+
+        // Search functionality
+        elements.searchBox.addEventListener('input', (e) => {
+            const query = e.target.value;
+            if (query.length > 0) {
+                const results = courseFinder.searchCourses(query);
+                elements.allCoursesList.innerHTML = results.map(course => `
+                    <div class="course-card" data-course-id="${course.id}">
+                        <div class="course-name">${course.name}</div>
+                        <div class="course-location">${course.city}, ${course.state}</div>
+                        <div class="course-details">
+                            <span>${course.holes} holes • Par ${course.par}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+                document.querySelectorAll('.course-card').forEach(card => {
+                    card.addEventListener('click', () => selectCourse(card.dataset.courseId));
+                });
+            } else {
+                renderCourses();
+            }
+        });
+
+        // Start playing button
+        elements.startPlayingBtn.addEventListener('click', () => {
+            if (selectedCourse) {
+                // Store selected course
+                localStorage.setItem('selectedCourse', JSON.stringify(selectedCourse));
+                // Redirect to GPS interface
+                window.location.href = 'gps-mobile.html';
+            }
+        });
+
+        // Manual entry buttons
+        [elements.manualEntryBtn, elements.manualEntryBtn2].forEach(btn => {
+            btn.addEventListener('click', () => {
+                window.location.href = 'gps-mobile.html';
+            });
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
+</html>
