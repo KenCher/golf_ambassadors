@@ -45,41 +45,23 @@ jobs:
 
       - name: Notify Slack
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           python - <<'EOF'
           import os, urllib.request, json
 
-          token   = os.environ["SLACK_BOT_TOKEN"]
-          channel = "GEQEG2C80"
-          url     = "https://cheruiyo.github.io/us-kvm-status/"
+          webhook_url = os.environ["SLACK_WEBHOOK_URL"]
+          report_url  = "https://cheruiyo.github.io/us-kvm-status/"
 
-          payload = {
-            "channel": channel,
-            "text": ":bug: *Weekly KVM Bug Report is ready*",
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": ":bug: *Weekly KVM Bug Report is ready*\nView the latest open bugs for the team:\n<" + url + "|Open Dashboard>"
-                }
-              },
-              {"type": "divider"}
-            ]
-          }
+          # Slack Workflow webhooks expect the variables defined in the workflow trigger
+          payload = {"report_url": report_url}
 
           req = urllib.request.Request(
-            "https://slack.com/api/chat.postMessage",
+            webhook_url,
             data=json.dumps(payload).encode(),
-            headers={
-              "Content-Type": "application/json",
-              "Authorization": f"Bearer {token}"
-            }
+            headers={"Content-Type": "application/json"}
           )
           with urllib.request.urlopen(req) as resp:
-            result = json.loads(resp.read())
-            if not result.get("ok"):
-              raise RuntimeError(f"Slack API error: {result.get('error')}")
+            print(f"Slack webhook response: {resp.status}")
           print("Slack notification sent.")
           EOF
