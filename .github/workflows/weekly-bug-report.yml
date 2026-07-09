@@ -1,0 +1,85 @@
+name: Weekly Bug Report
+
+on:
+  schedule:
+    - cron: '0 8 * * MON'   # Every Monday at 08:00 UTC
+  workflow_dispatch:         # Allow manual trigger from Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Generate HTML report
+        env:
+          BUGZILLA_URL: ${{ secrets.BUGZILLA_URL }}
+          BUGZILLA_API_KEY: ${{ secrets.BUGZILLA_API_KEY }}
+          # Comma-separated list of team member email addresses
+          TEAM_EMAILS: ${{ secrets.TEAM_EMAILS }}
+          PAGES_URL: "https://cheruiyo.github.io/us-kvm-status/"
+        run: python scripts/generate_bug_report.py
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          publish_branch: gh-pages
+          destination_dir: .
+          keep_files: false
+          commit_message: "chore: weekly bug report ${{ github.run_id }}"
+
+      - name: Notify Slack
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        run: |
+          python - <<'EOF'
+          import os, urllib.request, json
+
+          token   = os.environ["SLACK_BOT_TOKEN"]
+          channel = "GEQEG2C80"
+          url     = "https://cheruiyo.github.io/us-kvm-status/"
+
+          payload = {
+            "channel": channel,
+            "text": ":bug: *Weekly KVM Bug Report is ready*",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":bug: *Weekly KVM Bug Report is ready*\nView the latest open bugs for the team:\n<" + url + "|Open Dashboard>"
+                }
+              },
+              {"type": "divider"}
+            ]
+          }
+
+          req = urllib.request.Request(
+            "https://slack.com/api/chat.postMessage",
+            data=json.dumps(payload).encode(),
+            headers={
+              "Content-Type": "application/json",
+              "Authorization": f"Bearer {token}"
+            }
+          )
+          with urllib.request.urlopen(req) as resp:
+            result = json.loads(resp.read())
+            if not result.get("ok"):
+              raise RuntimeError(f"Slack API error: {result.get('error')}")
+          print("Slack notification sent.")
+          EOF
