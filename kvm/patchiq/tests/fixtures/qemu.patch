@@ -1,0 +1,14 @@
+Subject: [PATCH] virtio-blk: add config handler
+
+diff --git a/hw/virtio/virtio-blk.c b/hw/virtio/virtio-blk.c
+--- a/hw/virtio/virtio-blk.c
++++ b/hw/virtio/virtio-blk.c
+@@ -50,8 +50,14 @@ static void virtio_blk_init(VirtIODevice *vdev)
++	VirtIOBlk *s;
++	s = g_malloc0(sizeof(VirtIOBlk));
++	error_free(&err);
++	assert(0);
++	object_unref(OBJECT(s));
++	object_unref(OBJECT(s));
++	object_unref(OBJECT(s));
++	/* FIXME: double-free risk here */

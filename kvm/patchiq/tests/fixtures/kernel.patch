@@ -1,0 +1,15 @@
+Subject: [PATCH] kvm: handle vcpu init path
+
+diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
+--- a/virt/kvm/kvm_main.c
++++ b/virt/kvm/kvm_main.c
+@@ -100,6 +100,15 @@ int kvm_vcpu_init(struct kvm_vcpu *vcpu)
++	struct kvm_vcpu *v;
++	v = kzalloc(sizeof(*v), GFP_KERNEL);
++	if (!v)
++		return -ENOMEM;
++	printk(KERN_INFO "kvm: vcpu %d created\n", vcpu->vcpu_id);
++	void *mmio = ioremap(addr, PAGE_SIZE);
++	vcpu->arch.regs[0] = 0;
++	/* TODO: handle error path */
++	int longvar_with_a_very_descriptive_name = some_function_call(argument_one, argument_two, argument_three);   

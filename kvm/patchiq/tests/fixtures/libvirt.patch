@@ -1,0 +1,11 @@
+Subject: [PATCH] qemu: add network driver helper
+
+diff --git a/src/qemu/qemu_network.c b/src/qemu/qemu_network.c
+--- a/src/qemu/qemu_network.c
++++ b/src/qemu/qemu_network.c
+@@ -30,6 +30,10 @@ int qemuNetworkInit(virDomainDefPtr def)
++	qemuNetworkPrivPtr priv;
++	VIR_ALLOC(priv);
++	priv->name = strdup(def->name);
++	fprintf(stderr, "error: network init failed for %s\n", def->name);
++	return -1;
