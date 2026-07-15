@@ -1,11 +1,11 @@
 """
-Unit tests for every rule in watsonx_challenge_2026/rules.py.
-Run from the repo root:  python3 -m pytest watsonx_challenge_2026/tests/ -v
+Unit tests for every rule in patchiq/rules.py.
+Run from the repo root:  python3 -m pytest patchiq/tests/ -v
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from watsonx_challenge_2026.rules import run_rules
+from patchiq.rules import run_rules
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────

@@ -3,17 +3,17 @@
 #  PatchIQ — Run a patch review from the command line
 #
 #  Usage:
-#    ./watsonx_challenge_2026/run_review.sh                    # review HEAD commit
-#    ./watsonx_challenge_2026/run_review.sh my_fix.patch       # review a patch file
-#    ./watsonx_challenge_2026/run_review.sh origin/main..HEAD  # review a commit range
-#    git diff HEAD~1 | ./watsonx_challenge_2026/run_review.sh  # pipe a diff
+#    ./patchiq/run_review.sh                    # review HEAD commit
+#    ./patchiq/run_review.sh my_fix.patch       # review a patch file
+#    ./patchiq/run_review.sh origin/main..HEAD  # review a commit range
+#    git diff HEAD~1 | ./patchiq/run_review.sh  # pipe a diff
 # ──────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-HTML_OUT="watsonx_challenge_2026_review_$(date '+%Y%m%d_%H%M%S').html"
+HTML_OUT="patchiq_review_$(date '+%Y%m%d_%H%M%S').html"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
@@ -36,27 +36,27 @@ cd "$REPO_ROOT"
 if [ ! -t 0 ]; then
     # stdin has data — pipe mode
     echo "📥 Reading diff from stdin..."
-    python3 -m watsonx_challenge_2026.cli pipe --html "$HTML_OUT"
+    python3 -m patchiq.cli pipe --html "$HTML_OUT"
 
 elif [ "${1:-}" = "" ]; then
     # No argument — default to HEAD
     echo "📌 Reviewing HEAD commit..."
-    python3 -m watsonx_challenge_2026.cli commit HEAD --html "$HTML_OUT"
+    python3 -m patchiq.cli commit HEAD --html "$HTML_OUT"
 
 elif [[ "${1:-}" == *..* ]]; then
     # Looks like a git range
     echo "📌 Reviewing range: $1"
-    python3 -m watsonx_challenge_2026.cli range "$1" --html "$HTML_OUT"
+    python3 -m patchiq.cli range "$1" --html "$HTML_OUT"
 
 elif [ -f "${1:-}" ]; then
     # It's a file
     echo "📄 Reviewing patch file: $1"
-    python3 -m watsonx_challenge_2026.cli patch "$1" --html "$HTML_OUT"
+    python3 -m patchiq.cli patch "$1" --html "$HTML_OUT"
 
 else
     # Treat as a git ref
     echo "📌 Reviewing commit: $1"
-    python3 -m watsonx_challenge_2026.cli commit "${1:-HEAD}" --html "$HTML_OUT"
+    python3 -m patchiq.cli commit "${1:-HEAD}" --html "$HTML_OUT"
 fi
 
 echo ""

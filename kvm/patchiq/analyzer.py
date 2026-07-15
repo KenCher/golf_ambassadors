@@ -17,7 +17,7 @@ import requests
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
-from watsonx_challenge_2026.rules import run_rules
+from patchiq.rules import run_rules
 
 # ---------------------------------------------------------------------------
 # watsonx configuration  — set env vars or edit defaults below

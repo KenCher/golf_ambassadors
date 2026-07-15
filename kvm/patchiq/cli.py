@@ -4,16 +4,16 @@ PatchIQ — Command-line interface.
 
 Usage:
   # Review a patch file
-  python -m watsonx_challenge_2026.cli patch my_fix.patch
+  python -m patchiq.cli patch my_fix.patch
 
   # Review a git commit
-  python -m watsonx_challenge_2026.cli commit HEAD
+  python -m patchiq.cli commit HEAD
 
   # Review a git range
-  python -m watsonx_challenge_2026.cli range origin/main..HEAD
+  python -m patchiq.cli range origin/main..HEAD
 
   # Pipe a diff directly
-  git diff HEAD~1 | python -m watsonx_challenge_2026.cli pipe
+  git diff HEAD~1 | python -m patchiq.cli pipe
 """
 
 import argparse
@@ -21,8 +21,8 @@ import subprocess
 import sys
 import os
 
-from watsonx_challenge_2026.analyzer import review_patch
-from watsonx_challenge_2026.report import generate_html
+from patchiq.analyzer import review_patch
+from patchiq.report import generate_html
 
 
 def _run_git(*args) -> str:
@@ -115,7 +115,7 @@ def cmd_pipe(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="watsonx_challenge_2026",
+        prog="patchiq",
         description="PatchIQ — AI-powered patch review for KVM/Linux/QEMU/libvirt"
     )
     sub = parser.add_subparsers(dest="command", required=True)

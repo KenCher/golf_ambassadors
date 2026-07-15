@@ -1,12 +1,12 @@
 """
-Unit + integration tests for watsonx_challenge_2026/analyzer.py.
-Run from the repo root:  python3 -m pytest watsonx_challenge_2026/tests/ -v
+Unit + integration tests for patchiq/analyzer.py.
+Run from the repo root:  python3 -m pytest patchiq/tests/ -v
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 import pytest
-from watsonx_challenge_2026.analyzer import parse_diff, detect_layer, _score, review_patch, Finding
+from patchiq.analyzer import parse_diff, detect_layer, _score, review_patch, Finding
 
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")

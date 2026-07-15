@@ -5,7 +5,7 @@ Produces a self-contained HTML page from a ReviewResult.
 
 from datetime import datetime
 from typing import Optional
-from watsonx_challenge_2026.analyzer import ReviewResult
+from patchiq.analyzer import ReviewResult
 
 
 # Severity colour map
