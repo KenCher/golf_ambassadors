@@ -15,6 +15,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 HTML_OUT="patchiq_review_$(date '+%Y%m%d_%H%M%S').html"
 
+# Auto-load .env if present (supports watsonx credentials)
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+    set -o allexport
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/.env"
+    set +o allexport
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║         🔎 PatchIQ — AI Patch Reviewer                  ║"

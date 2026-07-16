@@ -25,7 +25,7 @@ from patchiq.rules import run_rules
 WX_API_KEY   = os.getenv("WATSONX_API_KEY", "")
 WX_PROJECT   = os.getenv("WATSONX_PROJECT_ID", "")
 WX_URL       = os.getenv("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
-WX_MODEL     = os.getenv("WATSONX_MODEL", "ibm/granite-13b-chat-v2")
+WX_MODEL     = os.getenv("WATSONX_MODEL", "ibm/granite-3-8b-instruct")
 
 IAM_TOKEN_URL = "https://iam.cloud.ibm.com/identity/token"
 
@@ -199,16 +199,16 @@ def ai_review(subject: str, files: List[FileDiff]) -> tuple[str, List[str]]:
         payload = {
             "model_id": WX_MODEL,
             "project_id": WX_PROJECT,
-            "input": f"<|system|>\n{_SYSTEM_PROMPT}\n<|user|>\n{prompt}\n<|assistant|>\n",
+            "input": f"<|start_of_role|>system<|end_of_role|>{_SYSTEM_PROMPT}<|end_of_text|><|start_of_role|>user<|end_of_role|>{prompt}<|end_of_text|><|start_of_role|>assistant<|end_of_role|>",
             "parameters": {
                 "decoding_method": "greedy",
                 "max_new_tokens": 800,
-                "stop_sequences": ["<|user|>"],
+                "stop_sequences": ["<|end_of_text|>"],
             },
         }
 
         resp = requests.post(
-            f"{WX_URL}/ml/v1/text/generation?version=2023-05-29",
+            f"{WX_URL}/ml/v1/text/generation?version=2024-05-01",
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",

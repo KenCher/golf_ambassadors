@@ -9,6 +9,17 @@ and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `.env.example` — template for watsonx credentials
+- `run_review.sh` auto-loads `patchiq/.env` when present
+
+### Fixed
+- `analyzer.py`: upgrade default model from deprecated `granite-13b-chat-v2`
+  to `ibm/granite-3-8b-instruct`
+- `analyzer.py`: update watsonx API version `2023-05-29` → `2024-05-01`
+- `analyzer.py`: fix Granite chat prompt template to Granite 3.x format
+  (`<|start_of_role|>system<|end_of_role|>` tokens)
+- `analyzer.py`: update `stop_sequences` to `["<|end_of_text|>"]`
+
 - Pre-commit hooks (ruff lint + format, trailing-whitespace, end-of-file-fixer)
 - GitHub Actions CI workflow (Python 3.8–3.12 matrix, lint, test, coverage)
 - `pyproject.toml` — PEP 517 packaging, `patchiq` entry-point script
