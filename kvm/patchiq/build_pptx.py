@@ -616,6 +616,79 @@ def slide_14_summary(prs):
         Inches(0.5), Inches(7.1), Inches(12.3), Inches(0.34),
         size=12, color=GREY, align=PP_ALIGN.CENTER)
 
+def slide_08b_ai_output(prs):
+    s = add_slide(prs)
+    bg(s, DARK)
+    heading(s, "watsonx Granite AI Review — Live Output")
+
+    ai_data = [
+        (
+            "kernel.patch  ·  56/100",
+            GREEN,
+            "Introduces kvm_vcpu_init() allocating memory via kzalloc(), initialising an mmio "
+            "region with ioremap(), and setting GPR[0] to zero. Contains a bare printk() and "
+            "unresolved TODO — not ready for upstream.",
+            [
+                "Ensure kzalloc() failure returns an error code, not silent continuation.",
+                "Replace printk() with pr_info() / pr_err() per kernel coding style.",
+                "Assign ioremap() result to an __iomem* pointer, not void*.",
+                "Acquire vcpu mutex before writing vcpu->arch.regs[0].",
+                "Resolve the TODO: implement a proper goto-based cleanup path.",
+            ],
+        ),
+        (
+            "qemu.patch  ·  78/100",
+            YELLOW,
+            "New virtio-blk config handler has multiple critical issues preventing upstream "
+            "acceptance: assert(0) causes hard abort, triple object_unref creates double-free "
+            "risk, and error_free() silently drops errors.",
+            [
+                "Replace assert(0) with g_assert_not_reached() per QEMU coding style.",
+                "Fix triple object_unref — add matching object_ref or remove duplicate unrefs.",
+                "Use error_propagate() instead of error_free() to surface errors to callers.",
+                "Add context comments and changelog entry as required by QEMU upstream.",
+            ],
+        ),
+        (
+            "libvirt.patch  ·  82/100",
+            RGBColor(0x86, 0xEF, 0xAC),  # light green
+            "Helper function only allocates memory and prints stderr without performing any "
+            "actual network driver initialisation — incomplete and not upstreamable as-is.",
+            [
+                "Implement real network driver initialisation in qemuNetworkInit().",
+                "Replace fprintf(stderr) with virReportError() per libvirt error-handling policy.",
+                "Replace strdup() with virStrdup() for consistent libvirt memory management.",
+                "Add a cleanup: label for VIR_ALLOC — required by libvirt resource-cleanup convention.",
+            ],
+        ),
+    ]
+
+    card_h = Inches(2.0)
+    gap    = Inches(0.16)
+    oy     = Inches(1.38)
+
+    for i, (title, col, summary, suggestions) in enumerate(ai_data):
+        cy = oy + i * (card_h + gap)
+        card(s, Inches(0.45), cy, Inches(12.4), card_h, border=col)
+        box(s, Inches(0.45), cy, Inches(0.07), card_h, fill=col, line=None)
+
+        # Title + model badge
+        txt(s, title, Inches(0.62), cy + Inches(0.1), Inches(6.5), Inches(0.4),
+            size=13, bold=True, color=col)
+        txt(s, "ibm/granite-3-8b-instruct", Inches(9.5), cy + Inches(0.1),
+            Inches(3.3), Inches(0.38), size=10, italic=True, color=GREY,
+            align=PP_ALIGN.RIGHT)
+
+        # Summary
+        txt(s, summary, Inches(0.62), cy + Inches(0.52), Inches(12.1), Inches(0.52),
+            size=11, color=WHITE)
+
+        # Suggestions inline
+        sugg_text = "  ·  ".join(f"({j+1}) {sg}" for j, sg in enumerate(suggestions[:3]))
+        txt(s, sugg_text, Inches(0.62), cy + Inches(1.08), Inches(12.1), Inches(0.75),
+            size=10, color=GREY)
+
+
 # ── MAIN ───────────────────────────────────────────────────────────────────
 def main():
     prs = Presentation()
@@ -630,6 +703,7 @@ def main():
     slide_06_pipeline(prs)
     slide_07_tests(prs)
     slide_08_scores(prs)
+    slide_08b_ai_output(prs)
     slide_09_kernel(prs)
     slide_10_qemu(prs)
     slide_11_libvirt(prs)

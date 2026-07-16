@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CIIQ — CI Intelligence &amp; Insight Query</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:14px;line-height:1.6;color:#1f2328;background:#f0f2f5;min-height:100vh}
+
+/* ── Top bar ── */
+.topbar{background:#1e3a5f;color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.topbar .logo{background:#3b82d4;font-size:13px;font-weight:800;padding:3px 10px;border-radius:5px;letter-spacing:.06em;cursor:default}
+.topbar .title{font-size:14px;font-weight:600;color:#e2e8f0}
+.topbar .subtitle{font-size:11px;color:#93c5fd;margin-left:4px}
+.topbar .spacer{flex:1}
+.topbar .run-badge{background:#1e40af;border:1px solid #3b82d4;border-radius:5px;padding:3px 10px;font-size:12px;color:#bfdbfe;cursor:default}
+.topbar .conn-dot{width:9px;height:9px;border-radius:50%;background:#6b7280;flex-shrink:0}
+.topbar .conn-dot.ok{background:#22c55e}
+.topbar .conn-dot.err{background:#ef4444}
+.topbar .conn-dot.loading{background:#f59e0b;animation:pulse .8s infinite alternate}
+@keyframes pulse{to{opacity:.4}}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:280px 1fr;gap:0;min-height:calc(100vh - 52px)}
+
+/* ── Sidebar ── */
+.sidebar{background:#fff;border-right:1px solid #e5e7eb;padding:16px 14px;overflow-y:auto;max-height:calc(100vh - 52px);position:sticky;top:52px}
+.sidebar h3{font-size:11px;font-weight:700;color:#57606a;text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #e5e7eb}
+.sidebar h3:first-child{margin-top:0}
+
+/* ── Config fields ── */
+label{display:block;font-size:11px;color:#57606a;font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;margin-top:10px}
+label:first-of-type{margin-top:0}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid #d1d5db;border-radius:5px;font-size:12px;font-family:inherit;color:#1f2328;background:#fff;outline:none}
+input:focus,select:focus,textarea:focus{border-color:#3b82d4;box-shadow:0 0 0 2px rgba(59,130,212,.15)}
+textarea{resize:vertical;font-family:"SFMono-Regular",Consolas,monospace;line-height:1.5}
+
+/* ── Buttons ── */
+.btn{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:none;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:#3b82d4;color:#fff}.btn-primary:hover{background:#2563a8}.btn-primary:disabled{background:#93c5fd;cursor:not-allowed}
+.btn-secondary{background:#f7f8fa;color:#1f2328;border:1px solid #e5e7eb}.btn-secondary:hover{background:#eef0f3}
+.btn-danger{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}.btn-danger:hover{background:#fee2e2}
+.btn-ghost{background:transparent;color:#3b82d4;border:1px solid #bfdbfe;font-size:11px;padding:4px 9px}.btn-ghost:hover{background:#eff6ff}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+
+/* ── Status messages ── */
+.status{font-size:11px;padding:6px 9px;border-radius:5px;margin-top:7px;display:none}
+.status.ok{background:#f0fdf4;border:1px solid #86efac;color:#166534;display:block}
+.status.err{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;display:block}
+.status.info{background:#fffbeb;border:1px solid #fde68a;color:#92400e;display:block}
+
+/* ── Main content ── */
+.main{padding:18px 20px;overflow-y:auto;max-height:calc(100vh - 52px)}
+
+/* ── Run info bar ── */
+.run-bar{background:#1f2328;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.run-bar .rb-field{display:flex;flex-direction:column}
+.run-bar .rb-label{font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:.05em}
+.run-bar .rb-value{font-size:13px;color:#e6edf3;font-family:"SFMono-Regular",Consolas,monospace;font-weight:600}
+.run-bar .rb-value a{color:#58a6ff;text-decoration:none}.run-bar .rb-value a:hover{text-decoration:underline}
+.run-bar .spacer{flex:1}
+
+/* ── Action bar ── */
+.action-bar{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:14px;flex-wrap:wrap}
+.action-bar .abar-title{font-weight:700;font-size:13px;flex:1}
+.action-bar .abar-sub{font-size:11px;color:#57606a;margin-top:1px}
+
+/* ── Correlation panel ── */
+.corr-panel{border:1px solid #bfdbfe;border-radius:8px;overflow:hidden;margin-bottom:16px}
+.corr-head{background:#1e3a5f;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.corr-head h2{font-size:13px;font-weight:700;color:#fff;margin:0;flex:1}
+.corr-head .ch-sub{font-size:11px;color:#93c5fd}
+.corr-body{padding:14px;font-size:13px;line-height:1.75;background:#f8faff;min-height:52px}
+.corr-body.empty{color:#57606a;font-style:italic}
+
+/* ── Project tabs ── */
+.proj-tabs{display:flex;gap:2px;border-bottom:2px solid #e5e7eb;margin-bottom:14px}
+.proj-tab{padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;border-bottom:none;border-radius:5px 5px 0 0;color:#57606a;background:transparent;font-family:inherit}
+.proj-tab.active{background:#fff;border-color:#e5e7eb;color:#1f2328;margin-bottom:-2px;border-bottom:2px solid #fff}
+.proj-panel{display:none}.proj-panel.active{display:block}
+
+/* ── Suite table ── */
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+th{background:#f7f8fa;text-align:left;padding:6px 8px;border:1px solid #e5e7eb;font-weight:600;font-size:11px;color:#57606a}
+td{padding:5px 8px;border:1px solid #e5e7eb;vertical-align:top}
+tr:nth-child(even) td{background:#fafafa}
+.st-fail{color:#991b1b;font-weight:700}
+.st-pass{color:#166534;font-weight:600}
+.st-unk{color:#57606a}
+.badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px;white-space:nowrap;display:inline-block}
+.bk{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
+.bi{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+.bt{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.bh{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
+.bc{background:#fdf4ff;color:#6b21a8;border:1px solid #e9d5ff}
+
+/* ── Result boxes ── */
+.result-box{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:14px}
+.result-head{background:#f7f8fa;padding:9px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px}
+.result-head h4{font-size:13px;font-weight:700;margin:0;flex:1}
+.result-body{padding:12px 14px;font-size:13px;line-height:1.75;min-height:52px}
+.result-body.empty{color:#57606a;font-style:italic}
+.result-body pre{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:4px;padding:9px 10px;font-size:11.5px;overflow-x:auto;margin:6px 0;font-family:"SFMono-Regular",Consolas,monospace;line-height:1.5}
+.result-body code{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:3px;padding:0 4px;font-size:11.5px;font-family:"SFMono-Regular",Consolas,monospace}
+.callout-rc  {background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin:8px 0}
+.callout-rc strong{color:#92400e}
+.callout-fix {background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 12px;margin:8px 0}
+.callout-fix strong{color:#166534}
+.callout-corr{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;margin:8px 0}
+.callout-corr strong{color:#1e40af}
+.callout-commit{background:#0d1117;border-radius:6px;padding:10px 12px;margin:8px 0;font-family:"SFMono-Regular",Consolas,monospace;font-size:11.5px;color:#e6edf3}
+
+/* ── Token bar ── */
+.tok-bar{font-size:11px;color:#57606a;padding:5px 14px;border-top:1px solid #e5e7eb;background:#fafafa;display:flex;gap:14px;flex-wrap:wrap}
+.tok-bar strong{color:#1f2328}
+
+/* ── Spinner ── */
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid #e5e7eb;border-top-color:#3b82d4;border-radius:50%;animation:spin .65s linear infinite;vertical-align:middle;margin-right:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── History ── */
+.hist-wrap{border:1px solid #e5e7eb;border-radius:6px;overflow:hidden}
+.hist-item{padding:7px 12px;border-bottom:1px solid #f0f0f0;font-size:12px;display:flex;gap:8px;align-items:flex-start}
+.hist-item:last-child{border-bottom:none}
+.hist-ts{color:#57606a;white-space:nowrap;font-size:11px;padding-top:1px;flex-shrink:0}
+.hist-msg{color:#1f2328;flex:1;word-break:break-word}
+
+/* ── Git delta tabs ── */
+.git-panel{border:1px solid #30363d;border-radius:8px;overflow:hidden;margin-bottom:12px}
+.git-head{background:#161b22;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.git-head h4{font-size:12px;font-weight:700;color:#e6edf3;margin:0}
+.git-head .gh-sub{font-size:10px;color:#8b949e}
+.git-body{background:#0d1117;padding:10px 12px}
+.sha-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px}
+.sha-box{background:#161b22;border:1px solid #30363d;border-radius:5px;padding:7px 10px}
+.sha-box label{color:#8b949e;font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin:0}
+.sha-box input{background:transparent;border:none;color:#e6edf3;font-size:11px;font-family:"SFMono-Regular",Consolas,monospace;padding:0;margin-top:3px}
+.sha-box input::placeholder{color:#484f58}
+.sha-arrow{color:#8b949e;text-align:center;font-size:16px}
+.git-tabs{display:flex;gap:2px;margin-bottom:8px}
+.git-tab{padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #30363d;border-radius:4px 4px 0 0;color:#8b949e;background:#161b22;font-family:inherit}
+.git-tab.active{background:#0d1117;border-bottom-color:#0d1117;color:#e6edf3}
+.git-section{display:none}.git-section.active{display:block}
+.code-area{width:100%;background:#161b22;border:1px solid #30363d;border-radius:4px;color:#e6edf3;font-size:11px;font-family:"SFMono-Regular",Consolas,monospace;padding:8px 10px;resize:vertical;line-height:1.5;min-height:70px}
+.code-area::placeholder{color:#484f58}
+.git-cmd{font-size:10px;color:#8b949e;margin-bottom:5px;font-family:"SFMono-Regular",Consolas,monospace}
+.git-cmd code{color:#58a6ff;background:transparent;border:none;font-size:10px}
+</style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<div class="topbar">
+  <span class="logo">CIIQ</span>
+  <span class="title">CI Intelligence &amp; Insight Query</span>
+  <span class="subtitle">— WatsonX-powered root-cause analysis</span>
+  <div class="spacer"></div>
+  <span class="run-badge" id="run-badge">Run: —</span>
+  <div class="conn-dot" id="conn-dot" title="WatsonX connection status"></div>
+</div>
+
+<!-- ══ LAYOUT ══ -->
+<div class="layout">
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+
+  <h3>WatsonX Config</h3>
+  <label>API Key</label>
+  <input type="password" id="wx-key" placeholder="IBM Cloud API key…" autocomplete="off">
+  <label>Project ID</label>
+  <input type="text" id="wx-proj" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+  <label>Region</label>
+  <select id="wx-region">
+    <option value="eu-de" selected>eu-de (Frankfurt)</option>
+    <option value="us-south">us-south (Dallas)</option>
+    <option value="eu-gb">eu-gb (London)</option>
+    <option value="jp-tok">jp-tok (Tokyo)</option>
+    <option value="custom">Custom endpoint</option>
+  </select>
+  <div id="custom-ep-row" style="display:none">
+    <label>Custom Endpoint URL</label>
+    <input type="text" id="wx-custom" placeholder="https://…/ml/v1/text/generation">
+  </div>
+  <label>Model</label>
+  <select id="wx-model">
+    <option value="ibm/granite-3-8b-instruct" selected>granite-3-8b-instruct</option>
+    <option value="ibm/granite-13b-chat-v2">granite-13b-chat-v2</option>
+    <option value="ibm/granite-34b-code-instruct">granite-34b-code-instruct</option>
+    <option value="meta-llama/llama-3-3-70b-instruct">llama-3-3-70b-instruct</option>
+    <option value="mistralai/mistral-large">mistral-large</option>
+  </select>
+  <label>Max Tokens</label>
+  <input type="number" id="wx-maxtok" value="2048" min="512" max="8192">
+
+  <div class="btn-row" style="margin-top:10px">
+    <button class="btn btn-secondary btn-sm" id="btn-test-conn">Test Connection</button>
+    <button class="btn btn-ghost btn-sm" id="btn-clear-creds">Clear</button>
+  </div>
+  <div id="conn-status" class="status"></div>
+
+  <h3>CI Run</h3>
+  <label>Run Date</label>
+  <input type="date" id="run-date" value="2026-07-14">
+  <label>Run ID</label>
+  <input type="text" id="run-id" value="#1566">
+  <label>Web UI</label>
+  <input type="text" id="run-url" value="https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run/1566">
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn btn-ghost btn-sm" id="btn-load-run">Load Run Logs</button>
+  </div>
+  <div id="run-status" class="status"></div>
+
+  <h3>Session</h3>
+  <div class="btn-row">
+    <button class="btn btn-danger btn-sm" id="btn-clear-history">Clear History</button>
+    <button class="btn btn-secondary btn-sm" id="btn-reset-all">Reset All</button>
+  </div>
+
+</div><!-- /sidebar -->
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Run info bar -->
+  <div class="run-bar">
+    <div class="rb-field">
+      <span class="rb-label">Run Date</span>
+      <span class="rb-value" id="rb-date">2026-07-14</span>
+    </div>
+    <div class="rb-field">
+      <span class="rb-label">Run ID</span>
+      <span class="rb-value" id="rb-id">#1566</span>
+    </div>
+    <div class="rb-field">
+      <span class="rb-label">Log Path (tuxmaker)</span>
+      <span class="rb-value">/home/ciuser/logs/daily/20260714/</span>
+    </div>
+    <div class="rb-field">
+      <span class="rb-label">Web UI</span>
+      <span class="rb-value"><a id="rb-url" href="https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run/1566" target="_blank">ci-run/1566 ↗</a></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="rb-field" style="align-items:flex-end">
+      <span class="rb-label">Failing Suites</span>
+      <span class="rb-value" id="rb-fail-count" style="color:#f85149">13 / 16</span>
+    </div>
+  </div>
+
+  <!-- Git delta panel -->
+  <div class="git-panel">
+    <div class="git-head">
+      <div>
+        <h4>Git Delta — What Changed Since Last Passing Run</h4>
+        <span class="gh-sub">Paste tuxmaker output here — the more context, the more precise the root-cause identification</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-load-example" style="background:#30363d;border-color:#484f58;color:#e6edf3">Load Example</button>
+    </div>
+    <div class="git-body">
+      <div class="sha-row">
+        <div class="sha-box">
+          <label>LAST PASSING SHA</label>
+          <input type="text" id="sha-good" placeholder="run #1565 · 2026-07-13">
+        </div>
+        <div class="sha-arrow">→</div>
+        <div class="sha-box">
+          <label>FAILING RUN SHA</label>
+          <input type="text" id="sha-bad" placeholder="run #1566 · 2026-07-14">
+        </div>
+      </div>
+      <div class="git-tabs">
+        <button class="git-tab active" data-gtab="log">git log</button>
+        <button class="git-tab" data-gtab="stat">diff --stat</button>
+        <button class="git-tab" data-gtab="patch">patch hunks</button>
+        <button class="git-tab" data-gtab="env">env / pkgs</button>
+      </div>
+      <div class="git-section active" id="gs-log">
+        <div class="git-cmd">On tuxmaker: <code>git log --oneline $GOOD..$BAD -- arch/s390/kvm/ include/uapi/linux/kvm.h drivers/s390/ arch/s390/boot/</code></div>
+        <textarea class="code-area" id="git-log" rows="6" placeholder="f7e8d9c kvm/s390: add intercept for 0xb9af&#10;d3c2b1a drivers/s390/cio: remove sysfs 'pim'&#10;b9a8c7d arch/s390/boot: reipl: ccw path change&#10;c6d5e4f include/uapi/linux/kvm.h: add MEM_OP flag 0x3a"></textarea>
+      </div>
+      <div class="git-section" id="gs-stat">
+        <div class="git-cmd">On tuxmaker: <code>git diff --stat $GOOD..$BAD</code></div>
+        <textarea class="code-area" id="git-stat" rows="6" placeholder=" arch/s390/kvm/intercept.c    |  47 ++++++--&#10; include/uapi/linux/kvm.h      |  12 ++&#10; drivers/s390/cio/device.c     |   8 ----&#10; arch/s390/boot/reipl.c        |  31 ++---"></textarea>
+      </div>
+      <div class="git-section" id="gs-patch">
+        <div class="git-cmd">On tuxmaker: <code>git diff $GOOD..$BAD -- arch/s390/kvm/ include/uapi/linux/kvm.h</code></div>
+        <textarea class="code-area" id="git-patch" rows="8" placeholder="diff --git a/include/uapi/linux/kvm.h b/include/uapi/linux/kvm.h&#10;+#define KVM_S390_MEMOP_F_INJECT_EXCEPTION (1ULL << 1)&#10;..."></textarea>
+      </div>
+      <div class="git-section" id="gs-env">
+        <div class="git-cmd">On tuxmaker: <code>rpm -qa | grep -E 's390-tools|qemu|libvirt|kernel' | sort</code></div>
+        <textarea class="code-area" id="git-env" rows="6" placeholder="# TODAY run #1566&#10;s390-tools-2.34.0  ← CHANGED from 2.33.0&#10;qemu-8.2.1&#10;kernel-5.15.0-20260714&#10;&#10;# YESTERDAY run #1565&#10;s390-tools-2.33.0"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action bar -->
+  <div class="action-bar">
+    <div>
+      <div class="abar-title">Run full root-cause analysis</div>
+      <div class="abar-sub">Git delta + all failure logs → WatsonX identifies exact introducing commit(s)</div>
+    </div>
+    <button class="btn btn-primary" id="btn-analyse-all">⚡ Analyse All Projects</button>
+    <button class="btn btn-secondary" id="btn-correlate">🔗 Correlate</button>
+  </div>
+
+  <!-- Cross-project correlation -->
+  <div class="corr-panel">
+    <div class="corr-head">
+      <h2>Cross-Project Root-Cause Report</h2>
+      <span class="ch-sub">Dependency chain · minimum fix set · reproducer</span>
+    </div>
+    <div class="corr-body empty" id="corr-body">Run per-project analyses first, then click <em>Correlate</em>. CIIQ will identify the minimum set of commits responsible for all failures and the cascade across KVM → QEMU → libvirt.</div>
+    <div class="tok-bar" id="corr-tok" style="display:none">
+      <span>Model: <strong id="corr-model">—</strong></span>
+      <span>Input tokens: <strong id="corr-in">—</strong></span>
+      <span>Output tokens: <strong id="corr-out">—</strong></span>
+    </div>
+  </div>
+
+  <!-- Project tabs -->
+  <div class="proj-tabs">
+    <button class="proj-tab active" data-ptab="kvm">KVM</button>
+    <button class="proj-tab" data-ptab="qemu">QEMU</button>
+    <button class="proj-tab" data-ptab="libvirt">libvirt</button>
+    <button class="proj-tab" data-ptab="history">Log</button>
+  </div>
+
+  <!-- ── KVM ── -->
+  <div class="proj-panel active" id="ptab-kvm">
+    <table>
+      <thead><tr><th style="width:170px">Suite</th><th>Cat</th><th>Status</th><th>Failure log snippet</th></tr></thead>
+      <tbody id="kvm-suite-tbody">
+        <tr><td><code>canton-prototype</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="canton-prototype" data-proj="kvm" rows="2">BUG: unable to handle page fault for address: 0000000000000000
+RIP: kvm_s390_handle_sie+0x2a3/0x4c0 [kvm]</textarea></td></tr>
+        <tr><td><code>ci-reipl</code></td><td><span class="badge bi">Infra</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="ci-reipl" data-proj="kvm" rows="2">chreipl: open /sys/firmware/reipl/ccw/device: No such file or directory
+zipl: error: unable to find re-IPL device</textarea></td></tr>
+        <tr><td><code>hades</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades" data-proj="kvm" rows="2">kvm-s390: intercept of unimplemented instruction 0xb9af at 0x80001234
+FAIL: inject_pfault_done (timeout waiting for pfault token interrupt)</textarea></td></tr>
+        <tr><td><code>hades-monolithic</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades-monolithic" data-proj="kvm" rows="2">kvm-s390: intercept of unimplemented instruction 0xb9af at 0x80001234
+FAIL: inject_pfault_done (same failure, monolithic config)</textarea></td></tr>
+        <tr><td><code>hades-withHW</code></td><td><span class="badge bh">HW</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades-withHW" data-proj="kvm" rows="2">CPACF query: missing KDSA facility bit
+kvm-s390: hardware SIE entry failed cc=3 (validity intercept)</textarea></td></tr>
+        <tr><td><code>kvm-selftests</code></td><td><span class="badge bt">Test</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="kvm-selftests" data-proj="kvm" rows="2">s390x/memop.c:312: ret == -1 && errno == EINVAL
+KVM_S390_MEM_OP ioctl unexpectedly succeeded with new flags</textarea></td></tr>
+        <tr><td><code>kvm-unit-tests-kvm</code></td><td><span class="badge bt">Test</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="kvm-unit-tests-kvm" data-proj="kvm" rows="2">FAIL sthyi: unexpected facility bits in response block byte[8]
+FAIL pfault: timeout waiting for pfault token interrupt</textarea></td></tr>
+        <tr><td><code>s390-tools</code></td><td><span class="badge bc">Config</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="s390-tools" data-proj="kvm" rows="2">lscss: sysfs attribute 'pim' not found under /sys/bus/ccw/devices/0.0.0150
+chzdev: kernel module cio not loaded or sysfs layout changed</textarea></td></tr>
+      </tbody>
+    </table>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-kvm">Analyse KVM</button>
+      <button class="btn btn-secondary btn-sm" id="btn-clear-kvm">Clear</button>
+    </div>
+    <div class="result-box">
+      <div class="result-head"><h4>CIIQ — KVM Root-Cause Analysis</h4></div>
+      <div class="result-body empty" id="kvm-body">Click <em>Analyse KVM</em> to identify introducing commit(s) for all 8 failures.</div>
+      <div class="tok-bar" id="kvm-tok" style="display:none"><span>Model: <strong id="kvm-model">—</strong></span><span>Input: <strong id="kvm-in">—</strong></span><span>Output: <strong id="kvm-out">—</strong></span></div>
+    </div>
+  </div>
+
+  <!-- ── QEMU ── -->
+  <div class="proj-panel" id="ptab-qemu">
+    <table>
+      <thead><tr><th style="width:170px">Suite</th><th>Cat</th><th>Status</th><th>Failure log snippet</th></tr></thead>
+      <tbody>
+        <tr><td><code>qemu-s390x-kvm</code></td><td><span class="badge bk">KVM backend</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="qemu-s390x-kvm" data-proj="qemu" rows="2">qemu-system-s390x: KVM_SET_ONE_REG failed for id 0x60000000003a: Invalid argument
+migration/savevm: device s390-cpu: unknown register 0x3a</textarea></td></tr>
+        <tr><td><code>qemu-migration-s390</code></td><td><span class="badge bc">Migration</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="qemu-migration-s390" data-proj="qemu" rows="2">live migration failed: CPU state mismatch (register set changed)
+error: CPU feature 'deflate-on-mmap' state diverged</textarea></td></tr>
+        <tr><td><code>qemu-unit-tests</code></td><td><span class="badge bt">Unit</span></td><td class="st-pass">PASS</td><td><textarea class="log-in" data-suite="qemu-unit-tests" data-proj="qemu" rows="2">All unit tests passed (1492/1492)</textarea></td></tr>
+        <tr><td><code>qemu-tcg-s390x</code></td><td><span class="badge bt">TCG</span></td><td class="st-pass">PASS</td><td><textarea class="log-in" data-suite="qemu-tcg-s390x" data-proj="qemu" rows="2">TCG tests passed — KVM-only path not exercised</textarea></td></tr>
+      </tbody>
+    </table>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-qemu">Analyse QEMU</button>
+      <button class="btn btn-secondary btn-sm" id="btn-clear-qemu">Clear</button>
+    </div>
+    <div class="result-box">
+      <div class="result-head"><h4>CIIQ — QEMU Root-Cause Analysis</h4></div>
+      <div class="result-body empty" id="qemu-body">Click <em>Analyse QEMU</em> to identify introducing commit(s).</div>
+      <div class="tok-bar" id="qemu-tok" style="display:none"><span>Model: <strong id="qemu-model">—</strong></span><span>Input: <strong id="qemu-in">—</strong></span><span>Output: <strong id="qemu-out">—</strong></span></div>
+    </div>
+  </div>
+
+  <!-- ── libvirt ── -->
+  <div class="proj-panel" id="ptab-libvirt">
+    <table>
+      <thead><tr><th style="width:170px">Suite</th><th>Cat</th><th>Status</th><th>Failure log snippet</th></tr></thead>
+      <tbody>
+        <tr><td><code>libvirt-s390x</code></td><td><span class="badge bc">Driver</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="libvirt-s390x" data-proj="libvirt" rows="2">error: Failed to start domain: qemu unexpectedly closed monitor
+qemu-system-s390x: KVM_SET_ONE_REG failed for id 0x60000000003a</textarea></td></tr>
+        <tr><td><code>libvirt-migration</code></td><td><span class="badge bc">Migration</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="libvirt-migration" data-proj="libvirt" rows="2">virsh migrate: unsupported configuration: CPU model mismatch
+host provides 'z16' features not present in guest XML</textarea></td></tr>
+        <tr><td><code>libvirt-qemu-driver</code></td><td><span class="badge bk">QEMU drv</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="libvirt-qemu-driver" data-proj="libvirt" rows="2">qemuMonitorJSONCheckError: unexpected reply for qom-get: key cpu.register-set not found
+qemuDomainBuildNamespace: failed to create /dev/kvm bind mount</textarea></td></tr>
+        <tr><td><code>libvirt-unit-tests</code></td><td><span class="badge bt">Unit</span></td><td class="st-pass">PASS</td><td><textarea class="log-in" data-suite="libvirt-unit-tests" data-proj="libvirt" rows="2">PASS: 847 tests, 0 failures</textarea></td></tr>
+      </tbody>
+    </table>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-libvirt">Analyse libvirt</button>
+      <button class="btn btn-secondary btn-sm" id="btn-clear-libvirt">Clear</button>
+    </div>
+    <div class="result-box">
+      <div class="result-head"><h4>CIIQ — libvirt Root-Cause Analysis</h4></div>
+      <div class="result-body empty" id="libvirt-body">Click <em>Analyse libvirt</em> to identify introducing commit(s).</div>
+      <div class="tok-bar" id="libvirt-tok" style="display:none"><span>Model: <strong id="libvirt-model">—</strong></span><span>Input: <strong id="libvirt-in">—</strong></span><span>Output: <strong id="libvirt-out">—</strong></span></div>
+    </div>
+  </div>
+
+  <!-- ── History ── -->
+  <div class="proj-panel" id="ptab-history">
+    <p style="font-size:12px;color:#57606a;margin-bottom:10px">All CIIQ API calls this session — timestamps, project, status, and response preview.</p>
+    <div id="hist-list"><div style="color:#57606a;font-style:italic;font-size:13px">No analyses run yet.</div></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────────────────────────
+var analysisCache = {};   // { kvm, qemu, libvirt }
+
+// ─────────────────────────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────────────────────────
+function wxConfig() {
+  return {
+    api_key:    document.getElementById('wx-key').value.trim(),
+    project_id: document.getElementById('wx-proj').value.trim(),
+    region:     document.getElementById('wx-region').value,
+    model:      document.getElementById('wx-model').value,
+    max_tokens: parseInt(document.getElementById('wx-maxtok').value, 10) || 2048,
+    custom_url: document.getElementById('wx-custom').value.trim()
+  };
+}
+
+function runInfo() {
+  return {
+    run_date: document.getElementById('run-date').value,
+    run_id:   document.getElementById('run-id').value
+  };
+}
+
+function delta() {
+  return {
+    sha_good:      document.getElementById('sha-good').value.trim(),
+    sha_bad:       document.getElementById('sha-bad').value.trim(),
+    git_log:       document.getElementById('git-log').value.trim(),
+    git_diff_stat: document.getElementById('git-stat').value.trim(),
+    git_patch:     document.getElementById('git-patch').value.trim(),
+    env_versions:  document.getElementById('git-env').value.trim()
+  };
+}
+
+function collectLogs(proj) {
+  var result = {};
+  document.querySelectorAll('.log-in[data-proj="' + proj + '"]').forEach(function(el) {
+    var v = el.value.trim();
+    if (v) result[el.dataset.suite] = v;
+  });
+  return result;
+}
+
+function setBody(id, html, cls) {
+  var el = document.getElementById(id);
+  el.className = 'result-body' + (cls ? ' ' + cls : '');
+  el.innerHTML = html;
+}
+
+function setCorr(html, cls) {
+  var el = document.getElementById('corr-body');
+  el.className = 'corr-body' + (cls ? ' ' + cls : '');
+  el.innerHTML = html;
+}
+
+function showTok(pre, model, inT, outT) {
+  var bar = document.getElementById(pre + '-tok');
+  if (!bar) return;
+  bar.style.display = 'flex';
+  document.getElementById(pre + '-model').textContent = model || '—';
+  document.getElementById(pre + '-in').textContent    = inT !== undefined ? inT : '—';
+  document.getElementById(pre + '-out').textContent   = outT !== undefined ? outT : '—';
+}
+
+function spin(label) {
+  return '<span class="spinner"></span>' + label;
+}
+
+function setConnDot(state) {
+  var d = document.getElementById('conn-dot');
+  d.className = 'conn-dot' + (state ? ' ' + state : '');
+  d.title = { ok: 'Connected', err: 'Connection error', loading: 'Connecting…' }[state] || '';
+}
+
+function setStatus(id, type, msg) {
+  var el = document.getElementById(id);
+  el.className = 'status ' + type;
+  el.textContent = msg;
+}
+
+function h(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Format WatsonX markdown → HTML
+// ─────────────────────────────────────────────────────────────────
+function fmt(raw) {
+  var t = h(raw);
+  // fenced code blocks
+  t = t.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, c) { return '<pre>' + c + '</pre>'; });
+  // inline code
+  t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  // bold
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  // h2 headings
+  t = t.replace(/^## (.+)$/gm, '<strong style="display:block;font-size:13px;margin:12px 0 4px;border-bottom:1px solid #e5e7eb;padding-bottom:2px">$1</strong>');
+  // h3 headings
+  t = t.replace(/^### (.+)$/gm, '<strong style="display:block;font-size:12px;margin:8px 0 3px;color:#57606a;text-transform:uppercase;letter-spacing:.04em">$1</strong>');
+  // Introducing Commit callout
+  t = t.replace(/(Introducing Commit[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
+    return '<div class="callout-commit"><strong style="color:#58a6ff">' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
+  });
+  // Root Cause callout
+  t = t.replace(/(Root Cause[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
+    return '<div class="callout-rc"><strong>' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
+  });
+  // Fix callout
+  t = t.replace(/(Recommended Fix[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
+    return '<div class="callout-fix"><strong>' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
+  });
+  // Correlation callout
+  t = t.replace(/(Cross-Project Correlation[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
+    return '<div class="callout-corr"><strong>' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
+  });
+  // bullet lists
+  t = t.replace(/^[-•] (.+)$/gm, '&bull; $1<br>');
+  // numbered list
+  t = t.replace(/^\d+\. (.+)$/gm, '<span style="display:block;margin-left:14px;margin-bottom:2px">$&</span>');
+  // remaining newlines
+  t = t.replace(/\n/g, '<br>');
+  return t;
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  API calls — all go through Flask backend
+// ─────────────────────────────────────────────────────────────────
+function apiPost(path, body) {
+  return fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function(r) { return r.json(); });
+}
+
+function testConnection() {
+  var wx = wxConfig();
+  if (!wx.api_key)    { setStatus('conn-status', 'err', 'Enter API key first.'); return; }
+  if (!wx.project_id) { setStatus('conn-status', 'err', 'Enter Project ID first.'); return; }
+  setStatus('conn-status', 'info', 'Testing connection…');
+  setConnDot('loading');
+  apiPost('/api/token', { api_key: wx.api_key })
+    .then(function(r) {
+      if (r.ok) {
+        setStatus('conn-status', 'ok', '✓ IAM token obtained — ' + r.token_preview);
+        setConnDot('ok');
+      } else {
+        setStatus('conn-status', 'err', r.error || 'Unknown error');
+        setConnDot('err');
+      }
+    })
+    .catch(function(e) { setStatus('conn-status', 'err', e.message); setConnDot('err'); });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Per-project analysis
+// ─────────────────────────────────────────────────────────────────
+function analyse(proj) {
+  var wx  = wxConfig();
+  var run = runInfo();
+  if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
+  if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+
+  var logs = collectLogs(proj);
+  if (!Object.keys(logs).length) { alert('No log snippets for ' + proj + '.'); return; }
+
+  setBody(proj + '-body', spin('Calling CIIQ backend…'));
+  document.getElementById('btn-' + proj).disabled = true;
+
+  apiPost('/api/analyse/' + proj, {
+    api_key:    wx.api_key,
+    project_id: wx.project_id,
+    delta:      delta(),
+    suite_logs: logs,
+    run_date:   run.run_date,
+    run_id:     run.run_id,
+    wx_overrides: {
+      region:     wx.region,
+      model:      wx.model,
+      max_tokens: wx.max_tokens,
+      custom_url: wx.custom_url,
+      project_id: wx.project_id
+    }
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error(r.error || 'Backend error');
+    analysisCache[proj] = r.analysis;
+    setBody(proj + '-body', fmt(r.analysis));
+    showTok(proj, r.model, r.input_tokens, r.generated_tokens);
+    refreshHistory();
+  })
+  .catch(function(e) {
+    setBody(proj + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(e.message) + '</div>');
+  })
+  .finally(function() { document.getElementById('btn-' + proj).disabled = false; });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Analyse all projects
+// ─────────────────────────────────────────────────────────────────
+function analyseAll() {
+  var wx  = wxConfig();
+  var run = runInfo();
+  if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
+  if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+
+  var allLogs = { kvm: collectLogs('kvm'), qemu: collectLogs('qemu'), libvirt: collectLogs('libvirt') };
+  ['kvm','qemu','libvirt'].forEach(function(p) { setBody(p + '-body', spin('Queued…')); });
+
+  document.getElementById('btn-analyse-all').disabled = true;
+
+  apiPost('/api/analyse/all', {
+    api_key:    wx.api_key,
+    project_id: wx.project_id,
+    delta:      delta(),
+    suite_logs: allLogs,
+    run_date:   run.run_date,
+    run_id:     run.run_id,
+    wx_overrides: {
+      region:     wx.region,
+      model:      wx.model,
+      max_tokens: wx.max_tokens,
+      custom_url: wx.custom_url,
+      project_id: wx.project_id
+    }
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error(r.error || 'Backend error');
+    Object.keys(r.results || {}).forEach(function(proj) {
+      var res = r.results[proj];
+      analysisCache[proj] = res.analysis;
+      setBody(proj + '-body', fmt(res.analysis));
+      showTok(proj, r.model, res.input_tokens, res.generated_tokens);
+    });
+    Object.keys(r.errors || {}).forEach(function(proj) {
+      setBody(proj + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(r.errors[proj]) + '</div>');
+    });
+    refreshHistory();
+  })
+  .catch(function(e) {
+    ['kvm','qemu','libvirt'].forEach(function(p) {
+      setBody(p + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(e.message) + '</div>');
+    });
+  })
+  .finally(function() { document.getElementById('btn-analyse-all').disabled = false; });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Correlation
+// ─────────────────────────────────────────────────────────────────
+function correlate() {
+  var wx  = wxConfig();
+  var run = runInfo();
+  if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
+  if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+
+  setCorr(spin('Running cross-project correlation…'));
+  document.getElementById('btn-correlate').disabled = true;
+
+  apiPost('/api/correlate', {
+    api_key:    wx.api_key,
+    project_id: wx.project_id,
+    delta:      delta(),
+    analyses:   analysisCache,
+    run_date:   run.run_date,
+    run_id:     run.run_id,
+    wx_overrides: {
+      region:     wx.region,
+      model:      wx.model,
+      max_tokens: wx.max_tokens,
+      custom_url: wx.custom_url,
+      project_id: wx.project_id
+    }
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error(r.error || 'Backend error');
+    setCorr(fmt(r.correlation));
+    var t = document.getElementById('corr-tok');
+    t.style.display = 'flex';
+    document.getElementById('corr-model').textContent = r.model || '—';
+    document.getElementById('corr-in').textContent    = r.input_tokens !== undefined ? r.input_tokens : '—';
+    document.getElementById('corr-out').textContent   = r.generated_tokens !== undefined ? r.generated_tokens : '—';
+    refreshHistory();
+  })
+  .catch(function(e) {
+    setCorr('<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(e.message) + '</div>');
+  })
+  .finally(function() { document.getElementById('btn-correlate').disabled = false; });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Load run logs from backend
+// ─────────────────────────────────────────────────────────────────
+function loadRunLogs() {
+  var date = document.getElementById('run-date').value.replace(/-/g, '');
+  setStatus('run-status', 'info', 'Loading suite logs from server…');
+  fetch('/api/run/' + date + '/suites')
+    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) { setStatus('run-status', 'err', r.error || 'Failed'); return; }
+      var count = 0;
+      Object.keys(r.suite_logs || {}).forEach(function(proj) {
+        Object.keys(r.suite_logs[proj] || {}).forEach(function(suite) {
+          var el = document.querySelector('.log-in[data-proj="' + proj + '"][data-suite="' + suite + '"]');
+          if (el && r.suite_logs[proj][suite]) {
+            el.value = r.suite_logs[proj][suite];
+            count++;
+          }
+        });
+      });
+      if (r.sha_bad) document.getElementById('sha-bad').value = r.sha_bad;
+      setStatus('run-status', 'ok', '✓ Loaded ' + count + ' suite log snippets');
+    })
+    .catch(function(e) { setStatus('run-status', 'err', e.message); });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  History
+// ─────────────────────────────────────────────────────────────────
+function refreshHistory() {
+  fetch('/api/history')
+    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      var list = document.getElementById('hist-list');
+      if (!r.history || !r.history.length) {
+        list.innerHTML = '<div style="color:#57606a;font-style:italic;font-size:13px">No analyses run yet.</div>';
+        return;
+      }
+      var cols = { ok: '#166534', err: '#991b1b', info: '#92400e' };
+      var html = '<div class="hist-wrap">';
+      r.history.forEach(function(e) {
+        html += '<div class="hist-item"><span class="hist-ts">' + e.ts + '</span>' +
+          '<span class="hist-msg"><strong style="color:' + (cols[e.status] || '#57606a') + '">[' +
+          e.project.toUpperCase() + '] ' + e.status.toUpperCase() + '</strong> — ' +
+          h(e.summary) + '…</span></div>';
+      });
+      html += '</div>';
+      list.innerHTML = html;
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Example data
+// ─────────────────────────────────────────────────────────────────
+function loadExample() {
+  document.getElementById('sha-good').value = 'a1b2c3d4  (2026-07-13 · run #1565)';
+  document.getElementById('sha-bad').value  = 'f7e8d9c0  (2026-07-14 · run #1566)';
+  document.getElementById('git-log').value =
+    'f7e8d9c kvm/s390: add intercept for new instruction 0xb9af\n' +
+    'd3c2b1a drivers/s390/cio: remove deprecated sysfs attribute \'pim\'\n' +
+    'b9a8c7d arch/s390/boot: reipl: switch ccw device path\n' +
+    'c6d5e4f include/uapi/linux/kvm.h: add KVM_S390_MEM_OP_F_INJECT_EXCEPTION flag (id 0x3a)';
+  document.getElementById('git-stat').value =
+    ' arch/s390/kvm/intercept.c      |  47 ++++++--\n' +
+    ' arch/s390/kvm/kvm-s390.c       | 123 ++++++++++++-------\n' +
+    ' include/uapi/linux/kvm.h        |  12 ++\n' +
+    ' drivers/s390/cio/device.c       |   8 ----\n' +
+    ' arch/s390/boot/reipl.c          |  31 ++---';
+  document.getElementById('git-patch').value =
+    'diff --git a/include/uapi/linux/kvm.h b/include/uapi/linux/kvm.h\n' +
+    '+#define KVM_S390_MEMOP_F_INJECT_EXCEPTION (1ULL << 1)  /* NEW id 0x3a */\n\n' +
+    'diff --git a/drivers/s390/cio/device.c b/drivers/s390/cio/device.c\n' +
+    '-static DEVICE_ATTR_RO(pim);\n' +
+    '-static DEVICE_ATTR_RO(pam);\n' +
+    '+/* pim/pam removed: use chpid attributes instead */';
+  document.getElementById('git-env').value =
+    '# TODAY run #1566\ns390-tools-2.34.0   ← CHANGED from 2.33.0\nqemu-8.2.1\nkernel-5.15.0-20260714\n\n' +
+    '# YESTERDAY run #1565\ns390-tools-2.33.0\nqemu-8.2.1\nkernel-5.15.0-20260713';
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Run info sync
+// ─────────────────────────────────────────────────────────────────
+function syncRunBar() {
+  var d  = document.getElementById('run-date').value;
+  var id = document.getElementById('run-id').value;
+  var u  = document.getElementById('run-url').value;
+  document.getElementById('rb-date').textContent = d || '—';
+  document.getElementById('rb-id').textContent   = id || '—';
+  document.getElementById('run-badge').textContent = 'Run: ' + (id || '—');
+  var aEl = document.getElementById('rb-url');
+  aEl.href        = u || '#';
+  aEl.textContent = (id || '—') + ' ↗';
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Wire events
+// ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-test-conn').addEventListener('click', testConnection);
+document.getElementById('btn-clear-creds').addEventListener('click', function() {
+  document.getElementById('wx-key').value = '';
+  document.getElementById('wx-proj').value = '';
+  document.getElementById('conn-status').className = 'status';
+  setConnDot('');
+});
+document.getElementById('wx-region').addEventListener('change', function() {
+  document.getElementById('custom-ep-row').style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+document.getElementById('btn-kvm').addEventListener('click',     function() { analyse('kvm'); });
+document.getElementById('btn-qemu').addEventListener('click',    function() { analyse('qemu'); });
+document.getElementById('btn-libvirt').addEventListener('click', function() { analyse('libvirt'); });
+document.getElementById('btn-analyse-all').addEventListener('click', analyseAll);
+document.getElementById('btn-correlate').addEventListener('click', correlate);
+document.getElementById('btn-load-example').addEventListener('click', loadExample);
+document.getElementById('btn-load-run').addEventListener('click', loadRunLogs);
+
+document.getElementById('btn-clear-kvm').addEventListener('click',     function() { setBody('kvm-body',     'Cleared.', 'empty'); document.getElementById('kvm-tok').style.display='none'; delete analysisCache.kvm; });
+document.getElementById('btn-clear-qemu').addEventListener('click',    function() { setBody('qemu-body',    'Cleared.', 'empty'); document.getElementById('qemu-tok').style.display='none'; delete analysisCache.qemu; });
+document.getElementById('btn-clear-libvirt').addEventListener('click', function() { setBody('libvirt-body', 'Cleared.', 'empty'); document.getElementById('libvirt-tok').style.display='none'; delete analysisCache.libvirt; });
+
+document.getElementById('btn-clear-history').addEventListener('click', function() {
+  fetch('/api/history', { method: 'DELETE' }).then(refreshHistory);
+});
+document.getElementById('btn-reset-all').addEventListener('click', function() {
+  ['kvm','qemu','libvirt'].forEach(function(p) {
+    setBody(p + '-body', 'Click <em>Analyse ' + p.toUpperCase() + '</em> to identify introducing commit(s).', 'empty');
+    document.getElementById(p + '-tok').style.display = 'none';
+    delete analysisCache[p];
+  });
+  setCorr('Run per-project analyses first, then click <em>Correlate</em>.', 'empty');
+  document.getElementById('corr-tok').style.display = 'none';
+  fetch('/api/history', { method: 'DELETE' }).then(refreshHistory);
+});
+
+['run-date','run-id','run-url'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', syncRunBar);
+});
+
+// git delta sub-tabs
+document.querySelectorAll('.git-tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.git-tab').forEach(function(x) { x.classList.remove('active'); });
+    document.querySelectorAll('.git-section').forEach(function(x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    document.getElementById('gs-' + t.dataset.gtab).classList.add('active');
+  });
+});
+
+// project tabs
+document.querySelectorAll('.proj-tab').forEach(function(t) {
+  t.addEventListener('click', function() {
+    document.querySelectorAll('.proj-tab').forEach(function(x) { x.classList.remove('active'); });
+    document.querySelectorAll('.proj-panel').forEach(function(x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    document.getElementById('ptab-' + t.dataset.ptab).classList.add('active');
+    if (t.dataset.ptab === 'history') refreshHistory();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────────────────────────────
+(function init() {
+  syncRunBar();
+  // Load config defaults from backend
+  fetch('/api/config').then(function(r) { return r.json(); }).then(function(r) {
+    if (!r.ok) return;
+    if (r.watsonx.region)     document.getElementById('wx-region').value = r.watsonx.region;
+    if (r.watsonx.model)      document.getElementById('wx-model').value  = r.watsonx.model;
+    if (r.watsonx.max_tokens) document.getElementById('wx-maxtok').value = r.watsonx.max_tokens;
+    // If server has credentials configured, show a tick without exposing them
+    if (r.watsonx.has_api_key && r.watsonx.has_project_id) {
+      setStatus('conn-status', 'ok', '✓ Server-side credentials configured in config.yaml');
+      setConnDot('ok');
+    }
+  });
+})();
+</script>
+</body>
+</html>
