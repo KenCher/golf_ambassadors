@@ -429,6 +429,15 @@ var analysisCache = {};   // { kvm, qemu, libvirt }
 //  Helpers
 // ─────────────────────────────────────────────────────────────────
 function wxConfig() {
+  if (window.serverCreds) {
+    return {
+      api_key: '', project_id: '',
+      region:     document.getElementById('wx-region').value,
+      model:      document.getElementById('wx-model').value,
+      max_tokens: parseInt(document.getElementById('wx-maxtok').value, 10) || 2048,
+      custom_url: document.getElementById('wx-custom').value.trim()
+    };
+  }
   return {
     api_key:    document.getElementById('wx-key').value.trim(),
     project_id: document.getElementById('wx-proj').value.trim(),
@@ -585,8 +594,10 @@ function testConnection() {
 function analyse(proj) {
   var wx  = wxConfig();
   var run = runInfo();
-  if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
-  if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  if (!window.serverCreds) {
+    if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
+    if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  }
 
   var logs = collectLogs(proj);
   if (!Object.keys(logs).length) { alert('No log snippets for ' + proj + '.'); return; }
@@ -628,8 +639,10 @@ function analyse(proj) {
 function analyseAll() {
   var wx  = wxConfig();
   var run = runInfo();
-  if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
-  if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  if (!window.serverCreds) {
+    if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
+    if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  }
 
   var allLogs = { kvm: collectLogs('kvm'), qemu: collectLogs('qemu'), libvirt: collectLogs('libvirt') };
   ['kvm','qemu','libvirt'].forEach(function(p) { setBody(p + '-body', spin('Queued…')); });
@@ -687,8 +700,10 @@ function analyseAll() {
 function correlate() {
   var wx  = wxConfig();
   var run = runInfo();
-  if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
-  if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  if (!window.serverCreds) {
+    if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
+    if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  }
 
   setCorr(spin('Running cross-project correlation…'));
   document.getElementById('btn-correlate').disabled = true;
@@ -897,8 +912,14 @@ document.querySelectorAll('.proj-tab').forEach(function(t) {
     if (r.watsonx.max_tokens) document.getElementById('wx-maxtok').value = r.watsonx.max_tokens;
     // If server has credentials configured, show a tick without exposing them
     if (r.watsonx.has_api_key && r.watsonx.has_project_id) {
-      setStatus('conn-status', 'ok', '✓ Server-side credentials configured in config.yaml');
+      window.serverCreds = true;
+      setStatus('conn-status', 'ok', '✓ Credentials loaded from server .env — ready');
       setConnDot('ok');
+      // Dim the credential inputs so users know they are pre-configured
+      var keyEl  = document.getElementById('wx-key');
+      var projEl = document.getElementById('wx-proj');
+      if (keyEl)  { keyEl.placeholder  = '(configured in server .env)'; keyEl.disabled  = true; keyEl.style.opacity  = '0.45'; }
+      if (projEl) { projEl.placeholder = '(configured in server .env)'; projEl.disabled = true; projEl.style.opacity = '0.45'; }
     }
   });
 })();
