@@ -1,51 +1,20 @@
 """
-PatchIQ — Diff parser and watsonx AI review engine.
+PatchIQ — Diff parser and local rule-based review engine.
 
 Flow:
   raw diff text
       → parse_diff()       split into per-file hunks
       → detect_layer()     kernel | qemu | libvirt
       → run_rules()        deterministic style checks
-      → ai_review()        watsonx LLM narrative review
-      → ReviewResult       collected findings + AI summary
+      → local_review()     heuristic narrative (no external API needed)
+      → ReviewResult       collected findings + summary
 """
 
 import re
-import os
-import json
-import requests
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 from patchiq.rules import run_rules
-
-# ---------------------------------------------------------------------------
-# watsonx configuration  — set env vars or edit defaults below
-# ---------------------------------------------------------------------------
-WX_API_KEY   = os.getenv("WATSONX_API_KEY", "")
-WX_PROJECT   = os.getenv("WATSONX_PROJECT_ID", "")
-WX_URL       = os.getenv("WATSONX_URL", "https://us-south.ml.cloud.ibm.com")
-WX_MODEL     = os.getenv("WATSONX_MODEL", "ibm/granite-3-8b-instruct")
-
-IAM_TOKEN_URL = "https://iam.cloud.ibm.com/identity/token"
-
-_iam_token_cache: Dict[str, str] = {}
-
-
-def _get_iam_token() -> str:
-    if _iam_token_cache.get("token"):
-        return _iam_token_cache["token"]
-    if not WX_API_KEY:
-        return ""
-    resp = requests.post(IAM_TOKEN_URL, data={
-        "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
-        "apikey": WX_API_KEY,
-    })
-    resp.raise_for_status()
-    token = resp.json()["access_token"]
-    _iam_token_cache["token"] = token
-    return token
-
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -104,7 +73,6 @@ def detect_layer(path: str) -> str:
     for layer, pattern in _LAYER_PATTERNS.items():
         if pattern.search(path):
             return layer
-    # Fallback: extension heuristics
     if path.endswith(('.c', '.h')):
         return "kernel"    # default C to kernel
     return "unknown"
@@ -114,7 +82,7 @@ def detect_layer(path: str) -> str:
 # Diff parser
 # ---------------------------------------------------------------------------
 
-def parse_diff(raw: str) -> tuple[str, List[FileDiff]]:
+def parse_diff(raw: str) -> Tuple[str, List[FileDiff]]:
     """
     Parse a unified diff.  Returns (subject, [FileDiff]).
     Subject is extracted from the 'Subject:' header if present (email patch),
@@ -122,16 +90,14 @@ def parse_diff(raw: str) -> tuple[str, List[FileDiff]]:
     """
     subject = ""
     files: List[FileDiff] = []
-    current_path = None
+    current_path: Optional[str] = None
     current_lines: List[str] = []
 
     for line in raw.splitlines():
-        # Email patch subject header
         if line.startswith("Subject:"):
             subject = re.sub(r'^\[PATCH[^\]]*\]\s*', '', line[8:].strip())
             continue
 
-        # New file header
         m = re.match(r'^diff --git a/(.+?) b/', line)
         if m:
             if current_path is not None:
@@ -144,7 +110,6 @@ def parse_diff(raw: str) -> tuple[str, List[FileDiff]]:
         if current_path is not None:
             current_lines.append(line)
 
-    # Flush last file
     if current_path is not None:
         layer = detect_layer(current_path)
         files.append(FileDiff(current_path, layer, current_lines))
@@ -156,79 +121,137 @@ def parse_diff(raw: str) -> tuple[str, List[FileDiff]]:
 
 
 # ---------------------------------------------------------------------------
-# watsonx AI review
+# Local narrative engine  (no external API)
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = """\
-You are PatchIQ, an expert code reviewer for the KVM and Linux open source stack.
-Your audience is experienced kernel, QEMU, and libvirt developers.
-Be concise, technical, and constructive. Focus on correctness, safety, and upstream acceptance.
-Format your response as JSON with keys: "summary" (string) and "suggestions" (list of strings).
-"""
+# Patterns that indicate interesting code patterns in added lines
+_SECURITY_RE  = re.compile(r'\b(copy_from_user|copy_to_user|__user|kmalloc|kzalloc|'
+                            r'kfree|mutex_lock|spin_lock|rcu_read_lock)\b')
+_LOCKING_RE   = re.compile(r'\b(mutex|spinlock|rwlock|semaphore|rcu)\b', re.IGNORECASE)
+_MEMORY_RE    = re.compile(r'\b(kmalloc|kzalloc|vzalloc|vmalloc|kfree|vfree)\b')
+_ERROR_RE     = re.compile(r'\b(ENOMEM|EINVAL|EFAULT|EBUSY|goto\s+\w+err|'
+                            r'return\s+-E[A-Z]+)\b')
+_IOCTL_RE     = re.compile(r'\b(ioctl|KVM_[A-Z_]+|VFIO_[A-Z_]+)\b')
+_TEST_RE      = re.compile(r'\b(assert|ASSERT|kselftest|kunit_test|g_assert)\b')
 
 
-def _build_prompt(subject: str, file_diffs: List[FileDiff]) -> str:
-    sections = []
-    for fd in file_diffs[:6]:          # cap to 6 files to stay within context
-        diff_snippet = '\n'.join(fd.lines[:120])   # cap lines per file
-        sections.append(f"### {fd.path} ({fd.layer})\n```diff\n{diff_snippet}\n```")
+def _added_lines(file_diffs: List[FileDiff]) -> List[str]:
+    lines = []
+    for fd in file_diffs:
+        for line in fd.lines:
+            if line.startswith('+') and not line.startswith('+++'):
+                lines.append(line[1:])
+    return lines
 
-    return (
-        f"Review this patch titled: \"{subject}\"\n\n"
-        + "\n\n".join(sections)
-        + "\n\nProvide a JSON response with 'summary' and 'suggestions'."
+
+def _stats(file_diffs: List[FileDiff]) -> dict:
+    added = removed = 0
+    for fd in file_diffs:
+        for line in fd.lines:
+            if line.startswith('+') and not line.startswith('+++'):
+                added += 1
+            elif line.startswith('-') and not line.startswith('---'):
+                removed += 1
+    return {"added": added, "removed": removed}
+
+
+def local_review(subject: str, files: List[FileDiff]) -> Tuple[str, List[str]]:
+    """
+    Generate a heuristic narrative summary and actionable suggestions without
+    calling any external API.  Based purely on diff content analysis.
+    """
+    if not files:
+        return "Empty diff — nothing to review.", []
+
+    layers = sorted({f.layer for f in files if f.layer != "unknown"})
+    stats  = _stats(files)
+    added  = _added_lines(files)
+
+    # Counts of interesting patterns in added lines
+    security_hits = sum(1 for l in added if _SECURITY_RE.search(l))
+    locking_hits  = sum(1 for l in added if _LOCKING_RE.search(l))
+    memory_hits   = sum(1 for l in added if _MEMORY_RE.search(l))
+    error_hits    = sum(1 for l in added if _ERROR_RE.search(l))
+    ioctl_hits    = sum(1 for l in added if _IOCTL_RE.search(l))
+    test_hits     = sum(1 for l in added if _TEST_RE.search(l))
+
+    # --- Summary ---
+    layer_str  = "/".join(layers) if layers else "general"
+    size_desc  = (
+        "small" if stats["added"] < 30 else
+        "medium" if stats["added"] < 150 else
+        "large"
+    )
+    churn_desc = (
+        f"+{stats['added']}/-{stats['removed']} lines across "
+        f"{len(files)} file{'s' if len(files) != 1 else ''}"
     )
 
+    focus_parts = []
+    if locking_hits:
+        focus_parts.append("locking/synchronisation")
+    if memory_hits:
+        focus_parts.append("memory allocation/free")
+    if security_hits:
+        focus_parts.append("user-kernel boundary")
+    if ioctl_hits:
+        focus_parts.append("KVM/VFIO ioctl interface")
+    if error_hits:
+        focus_parts.append("error handling")
 
-def ai_review(subject: str, files: List[FileDiff]) -> tuple[str, List[str]]:
-    """
-    Call watsonx to generate a narrative review.
-    Returns (summary_string, [suggestion, ...]).
-    Falls back gracefully if API key is not configured.
-    """
-    if not WX_API_KEY or not WX_PROJECT:
-        return (
-            "AI review skipped — set WATSONX_API_KEY and WATSONX_PROJECT_ID to enable.",
-            []
+    focus_str = (
+        "Touches: " + ", ".join(focus_parts) + "."
+        if focus_parts else "General code change."
+    )
+
+    summary = (
+        f"This is a {size_desc} {layer_str} patch ({churn_desc}). "
+        f"{focus_str}"
+    )
+    if test_hits:
+        summary += " Includes test coverage — good practice."
+
+    # --- Suggestions ---
+    suggestions: List[str] = []
+
+    if memory_hits and not error_hits:
+        suggestions.append(
+            "Memory allocation detected but no error-path return found in added lines. "
+            "Verify all kmalloc/kzalloc results are checked and freed on every error path."
         )
 
-    try:
-        token = _get_iam_token()
-        prompt = _build_prompt(subject, files)
-
-        payload = {
-            "model_id": WX_MODEL,
-            "project_id": WX_PROJECT,
-            "input": f"<|start_of_role|>system<|end_of_role|>{_SYSTEM_PROMPT}<|end_of_text|><|start_of_role|>user<|end_of_role|>{prompt}<|end_of_text|><|start_of_role|>assistant<|end_of_role|>",
-            "parameters": {
-                "decoding_method": "greedy",
-                "max_new_tokens": 800,
-                "stop_sequences": ["<|end_of_text|>"],
-            },
-        }
-
-        resp = requests.post(
-            f"{WX_URL}/ml/v1/text/generation?version=2024-05-01",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=30,
+    if locking_hits and security_hits:
+        suggestions.append(
+            "Locking and user-kernel copy operations coexist. Confirm the lock is held "
+            "correctly across copy_from_user/copy_to_user to avoid TOCTOU races."
         )
-        resp.raise_for_status()
-        generated = resp.json()["results"][0]["generated_text"].strip()
 
-        # Parse JSON from the response
-        json_match = re.search(r'\{.*\}', generated, re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group())
-            return parsed.get("summary", ""), parsed.get("suggestions", [])
+    if ioctl_hits and not locking_hits:
+        suggestions.append(
+            "IOCTL/KVM uAPI changes without visible lock acquisition. Ensure the vcpu "
+            "mutex or kvm->lock is held for the duration of state mutations."
+        )
 
-        return generated, []
+    if stats["added"] > 200 and not test_hits:
+        suggestions.append(
+            f"Large patch (+{stats['added']} lines) with no test additions detected. "
+            "Consider adding a KVM selftest or kunit test to cover the new behaviour."
+        )
 
-    except Exception as exc:
-        return f"AI review unavailable: {exc}", []
+    if stats["removed"] == 0 and stats["added"] > 50:
+        suggestions.append(
+            "Pure addition with no removed lines — double-check for dead code or "
+            "duplicate logic that should replace, not augment, existing functionality."
+        )
+
+    if not suggestions:
+        suggestions.append(
+            "No major concerns flagged by static analysis. Review the style findings "
+            "above and ensure the commit message references the relevant bug or "
+            "mailing list discussion."
+        )
+
+    return summary, suggestions
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +269,7 @@ def _score(findings: List[Finding]) -> int:
 # ---------------------------------------------------------------------------
 
 def review_patch(raw_diff: str) -> ReviewResult:
-    """Full pipeline: parse → style rules → AI review → score."""
+    """Full pipeline: parse → style rules → local narrative → score."""
     subject, files = parse_diff(raw_diff)
 
     all_findings: List[Finding] = []
@@ -262,7 +285,7 @@ def review_patch(raw_diff: str) -> ReviewResult:
                     line=rf.get("line"),
                 ))
 
-    ai_summary, ai_suggestions = ai_review(subject, files)
+    ai_summary, ai_suggestions = local_review(subject, files)
     score = _score(all_findings)
 
     return ReviewResult(

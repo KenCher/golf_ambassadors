@@ -1,30 +1,29 @@
 """
-CIIQ — CI Intelligence & Insight Query
-Flask backend: WatsonX-powered root-cause analyser for KVM, QEMU, and libvirt CI failures.
+CIIQ — CI Intelligence & Insight Query  (local edition)
+Flask backend: rule-based root-cause analyser for KVM, QEMU, and libvirt CI failures.
+No external API or credentials required.
 
 Endpoints
 ---------
 GET  /                          Serve the CIIQ UI
-GET  /api/config                Return sanitised config (no secrets)
-POST /api/token                 Exchange IBM Cloud API key for IAM Bearer token
-POST /api/analyse/<project>     Run WatsonX analysis for one project
-POST /api/analyse/all           Run all three projects sequentially
+GET  /api/config                Return sanitised config
+POST /api/analyse/<project>     Run local analysis for one project
+POST /api/analyse/all           Run all three projects
 POST /api/correlate             Run cross-project correlation
 GET  /api/runs                  List available CI run dates from log dir
 GET  /api/run/<date>/suites     Return suite names + log snippets for a date
 GET  /api/history               Return session analysis history
 DELETE /api/history             Clear session history
+
+For the watsonx-backed variant see: app-wx.py
 """
 
 import os
-import json
-import time
-import logging
 import re
+import logging
 from datetime import datetime
 from functools import wraps
 
-import requests
 import yaml
 from flask import Flask, jsonify, request, render_template, session
 from flask_cors import CORS
@@ -35,7 +34,7 @@ from dotenv import load_dotenv
 # ─────────────────────────────────────────────────────────────────────────────
 load_dotenv()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.yaml")
 
 logging.basicConfig(
@@ -74,172 +73,277 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = CFG.get("server", {}).get("secret_key") or os.urandom(32)
 CORS(app)
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  IAM token cache (per-process; good for single-worker deployments)
-# ─────────────────────────────────────────────────────────────────────────────
-_iam_cache: dict = {"token": None, "expires_at": 0.0}
-
-
-def get_iam_token(api_key: str) -> str:
-    """Return a valid IBM IAM Bearer token, refreshing if needed."""
-    now = time.time()
-    if _iam_cache["token"] and now < _iam_cache["expires_at"]:
-        return _iam_cache["token"]
-
-    log.info("Refreshing IAM token...")
-    resp = requests.post(
-        "https://iam.cloud.ibm.com/identity/token",
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data={
-            "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
-            "apikey": api_key,
-        },
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    if "access_token" not in data:
-        raise ValueError(f"IAM error: {data.get('errorMessage', json.dumps(data))}")
-
-    _iam_cache["token"] = data["access_token"]
-    _iam_cache["expires_at"] = now + data.get("expires_in", 3600) - 60
-    log.info("IAM token refreshed (expires in ~%ds)", data.get("expires_in", 3600))
-    return _iam_cache["token"]
-
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  WatsonX inference
+#  Local analysis engine  — no external API
 # ─────────────────────────────────────────────────────────────────────────────
-WX_CFG = CFG.get("watsonx", {})
 
+# Error patterns we scan for in log text
+_ERROR_PATTERNS = [
+    (re.compile(r'\bBUG:\s', re.IGNORECASE),        "kernel BUG"),
+    (re.compile(r'\bKernel panic\b', re.IGNORECASE), "kernel panic"),
+    (re.compile(r'\bOops\b'),                         "kernel Oops"),
+    (re.compile(r'\bgeneral protection fault\b', re.IGNORECASE), "GPF"),
+    (re.compile(r'\bsegfault\b|\bsegmentation fault\b', re.IGNORECASE), "segfault"),
+    (re.compile(r'\bNULL pointer dereference\b', re.IGNORECASE), "NULL deref"),
+    (re.compile(r'\buse-after-free\b', re.IGNORECASE), "use-after-free"),
+    (re.compile(r'\bstack overflow\b', re.IGNORECASE), "stack overflow"),
+    (re.compile(r'\bdeadlock\b', re.IGNORECASE),      "deadlock"),
+    (re.compile(r'\bWARN_ON\b|\bWARNING:\s'),          "kernel WARNING"),
+    (re.compile(r'\bTIMEOUT\b|\btimeout\b'),           "timeout"),
+    (re.compile(r'\bFAIL\b|\bFAILED\b'),               "test FAIL"),
+    (re.compile(r'\bERROR:\s|\berror:\s'),              "ERROR"),
+    (re.compile(r'\bAborted\b|\baborted\b'),            "abort"),
+    (re.compile(r'\bAssertionError\b'),                "assertion"),
+    (re.compile(r'\bNo such device\b', re.IGNORECASE), "device not found"),
+    (re.compile(r'\bPermission denied\b', re.IGNORECASE), "permission denied"),
+    (re.compile(r'\bInvalid argument\b', re.IGNORECASE), "EINVAL"),
+    (re.compile(r'\bOut of memory\b|\bOOM\b', re.IGNORECASE), "OOM"),
+    (re.compile(r'\bmigration failed\b', re.IGNORECASE), "migration failure"),
+]
 
-def wx_endpoint(region: str, custom_url: str = "") -> str:
-    """Return the full WatsonX text generation URL for a given region or custom endpoint."""
-    if custom_url:
-        return custom_url
-    return (
-        f"https://{region}.ml.cloud.ibm.com/ml/v1/text/generation"
-        "?version=2024-05-01"
-    )
+# Subsystem keywords for attribution
+_SUBSYSTEM_PATTERNS = {
+    "KVM core":       re.compile(r'\bkvm\b|\bKVM\b|\bSIE\b|\bvcpu\b'),
+    "s390x arch":     re.compile(r'\bs390\b|\bs390x\b|\bz/VM\b'),
+    "memory mgmt":    re.compile(r'\bgfn\b|\bpfn\b|\bsmmu\b|\bHugePage\b|\bpfault\b'),
+    "VFIO":           re.compile(r'\bvfio\b|\bVFIO\b|\biommu\b'),
+    "virtio":         re.compile(r'\bvirtio\b|\bvirtqueue\b'),
+    "live migration": re.compile(r'\bmigrat\b|\blive mig\b', re.IGNORECASE),
+    "CPU model":      re.compile(r'\bcpu model\b|\bcpuflags\b|\bfacility\b', re.IGNORECASE),
+    "QMP/monitor":    re.compile(r'\bQMP\b|\bqmp\b|\bmonitor\b'),
+    "libvirt driver": re.compile(r'\bvirDomain\b|\bqemuDomain\b|\bvirConnect\b'),
+    "QEMU block":     re.compile(r'\bblkdev\b|\bblk_\b|\bqcow\b', re.IGNORECASE),
+}
 
+# Commit introducing patterns in git log
+_COMMIT_RE = re.compile(
+    r'^([0-9a-f]{7,40})\s+(.+)',
+    re.MULTILINE,
+)
 
-def wx_generate(prompt: str, token: str, overrides: dict | None = None) -> dict:
-    """Call WatsonX text generation and return the full response dict."""
-    params = {
-        "region":    overrides.get("region",    WX_CFG.get("region",    "us-south"))        if overrides else WX_CFG.get("region",    "us-south"),
-        "model":     overrides.get("model",     WX_CFG.get("model",     "ibm/granite-3-8b-instruct")) if overrides else WX_CFG.get("model", "ibm/granite-3-8b-instruct"),
-        "max_tokens": int(overrides.get("max_tokens", WX_CFG.get("max_tokens", 2048)))    if overrides else int(WX_CFG.get("max_tokens", 2048)),
-        "custom_url": overrides.get("custom_url", "")                                     if overrides else "",
-        "project_id": overrides.get("project_id", WX_CFG.get("project_id", ""))          if overrides else WX_CFG.get("project_id", ""),
-    }
+# Category labels per suite category
+_CATEGORY_LABELS = {
+    "kernel": "kernel / KVM",
+    "config": "configuration / boot",
+    "test":   "test harness",
+    "infra":  "CI infrastructure",
+    "hw":     "hardware / bare-metal",
+}
 
-    url = wx_endpoint(params["region"], params["custom_url"])
-    payload = {
-        "model_id": params["model"],
-        "input": prompt,
-        "parameters": {
-            "decoding_method": "greedy",
-            "max_new_tokens": params["max_tokens"],
-            "min_new_tokens": 80,
-            "repetition_penalty": 1.05,
-        },
-        "project_id": params["project_id"],
-    }
-
-    log.info("WatsonX call → model=%s tokens=%d", params["model"], params["max_tokens"])
-    resp = requests.post(
-        url,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-        },
-        json=payload,
-        timeout=120,
-    )
-    resp.raise_for_status()
-    return resp.json()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Prompt builders
-# ─────────────────────────────────────────────────────────────────────────────
-PERSONAS = {
+# Per-project expert context (no LLM needed)
+_EXPERT_CONTEXT = {
     "kvm": (
-        "You are a senior IBM s390x KVM kernel engineer with expert knowledge of "
-        "arch/s390/kvm/, the SIE mechanism, intercept handling, pfault, VSIE, "
-        "protected virtualisation, and the KVM UAPI."
+        "KVM s390x uses the SIE (Start Interpretive Execution) mechanism. "
+        "Intercept handling, VSIE, pfault, and protected virtualisation are key areas. "
+        "State mutations must happen under vcpu->mutex or kvm->lock."
     ),
     "qemu": (
-        "You are a senior QEMU engineer specialising in s390x KVM acceleration, "
-        "CPU state serialisation, live migration, the KVM_SET_ONE_REG interface, "
-        "and QEMU machine types for IBM Z."
+        "QEMU s390x uses KVM acceleration via KVM_SET_ONE_REG / KVM_GET_ONE_REG. "
+        "CPU state serialisation, live migration streams, and machine type compatibility "
+        "are the most common regression areas."
     ),
     "libvirt": (
-        "You are a senior libvirt engineer with deep knowledge of the QEMU driver, "
-        "s390x domain configuration, virsh migrate, QMP monitor communication, "
-        "and libvirt's CPU model detection for IBM Z."
+        "libvirt communicates with QEMU via QMP. s390x domain configuration, "
+        "virsh migrate, CPU model detection, and the QEMU driver state machine "
+        "are common failure points."
     ),
 }
 
 
-def _git_context(delta: dict) -> str:
-    parts = ["=== GIT DELTA (last passing run → failing run) ==="]
-    if delta.get("sha_good") or delta.get("sha_bad"):
-        parts.append(
-            f"Last passing SHA: {delta.get('sha_good', '(not provided)')}\n"
-            f"Failing run SHA:  {delta.get('sha_bad',  '(not provided)')}"
-        )
-    if delta.get("git_log"):
-        parts.append(f"--- git log ---\n{delta['git_log']}")
-    if delta.get("git_diff_stat"):
-        parts.append(f"--- git diff --stat ---\n{delta['git_diff_stat']}")
-    if delta.get("git_patch"):
-        parts.append(f"--- key patch hunks ---\n{delta['git_patch']}")
-    if delta.get("env_versions"):
-        parts.append(f"--- environment / package versions ---\n{delta['env_versions']}")
-    return "\n\n".join(parts)
+def _scan_log(text: str) -> dict:
+    """Scan a single log blob and return structured findings."""
+    hits: dict[str, int] = {}
+    for pattern, label in _ERROR_PATTERNS:
+        count = len(pattern.findall(text))
+        if count:
+            hits[label] = hits.get(label, 0) + count
+
+    subsystems: list[str] = []
+    for name, pat in _SUBSYSTEM_PATTERNS.items():
+        if pat.search(text):
+            subsystems.append(name)
+
+    # Pull up to 3 representative error lines
+    error_lines: list[str] = []
+    for line in text.splitlines():
+        if any(pat.search(line) for pat, _ in _ERROR_PATTERNS[:10]):  # top-10 are serious
+            stripped = line.strip()
+            if stripped and stripped not in error_lines:
+                error_lines.append(stripped)
+            if len(error_lines) >= 3:
+                break
+
+    return {"hits": hits, "subsystems": subsystems, "error_lines": error_lines}
 
 
-def build_project_prompt(
+def _extract_commits(git_log: str) -> list[dict]:
+    """Parse git log lines into [{sha, subject}]."""
+    results = []
+    for m in _COMMIT_RE.finditer(git_log):
+        results.append({"sha": m.group(1), "subject": m.group(2).strip()})
+    return results[:10]   # cap at 10
+
+
+def analyse_project(
     project: str,
     delta: dict,
     suite_logs: dict,
     run_date: str,
     run_id: str,
 ) -> str:
-    persona = PERSONAS.get(project, "You are an expert CI engineer.")
-    git_ctx = _git_context(delta)
+    """
+    Produce a structured Markdown analysis for one project using only local
+    heuristics — no external API.
+    """
+    expert_ctx = _EXPERT_CONTEXT.get(project, "")
+    commits     = _extract_commits(delta.get("git_log", ""))
+    diff_stat   = delta.get("git_diff_stat", "").strip()
+    sha_good    = delta.get("sha_good", "(unknown)")
+    sha_bad     = delta.get("sha_bad",  "(unknown)")
 
-    logs_block = "\n\n".join(
-        f"Suite: {suite}\n{log_text}"
-        for suite, log_text in suite_logs.items()
-        if log_text and log_text.strip()
+    # Aggregate scan results across all suites
+    all_hits: dict[str, int] = {}
+    all_subsystems: set[str] = set()
+    all_error_lines: list[str] = []
+    failing_suites: list[str] = []
+    passing_suites: list[str] = []
+
+    for suite, log_text in suite_logs.items():
+        scan = _scan_log(log_text or "")
+        if scan["hits"]:
+            failing_suites.append(suite)
+            for k, v in scan["hits"].items():
+                all_hits[k] = all_hits.get(k, 0) + v
+            all_subsystems.update(scan["subsystems"])
+            all_error_lines.extend(scan["error_lines"][:2])
+        else:
+            passing_suites.append(suite)
+
+    # --- Build Markdown report ---
+    lines: list[str] = []
+
+    lines.append(f"## Run {run_date}  {run_id}  —  {project.upper()} Analysis")
+    lines.append(f"*Generated by CIIQ local engine — no external API*")
+    lines.append("")
+
+    # 1. Introducing commits
+    lines.append("## 1. Introducing Commit(s)")
+    if commits:
+        lines.append(
+            f"The following commit(s) landed between the last passing run "
+            f"(`{sha_good[:12]}`) and the failing run (`{sha_bad[:12]}`):"
+        )
+        for c in commits:
+            lines.append(f"- `{c['sha']}` {c['subject']}")
+        if diff_stat:
+            lines.append("")
+            lines.append("**Changed files (diff --stat):**")
+            lines.append("```")
+            lines.append(diff_stat[:1000])
+            lines.append("```")
+    else:
+        lines.append(
+            "No git log provided. Supply `delta.git_log` to get commit attribution."
+        )
+    lines.append("")
+
+    # 2. Root cause
+    lines.append("## 2. Root Cause")
+    if all_hits:
+        top_errors = sorted(all_hits.items(), key=lambda x: -x[1])[:5]
+        error_summary = ", ".join(f"{k} (×{v})" for k, v in top_errors)
+        lines.append(
+            f"Detected error signatures: **{error_summary}**. "
+            f"{len(failing_suites)} suite(s) produced errors; "
+            f"{len(passing_suites)} suite(s) passed."
+        )
+        if all_error_lines:
+            lines.append("")
+            lines.append("Representative failure lines:")
+            for el in all_error_lines[:4]:
+                lines.append(f"> `{el[:120]}`")
+        lines.append("")
+        lines.append(f"**{project.upper()} context:** {expert_ctx}")
+    else:
+        lines.append(
+            "No error signatures detected in the provided logs. "
+            "All suites appear to have passed, or logs were not provided."
+        )
+    lines.append("")
+
+    # 3. Affected subsystems
+    lines.append("## 3. Affected Subsystems")
+    if all_subsystems:
+        for sub in sorted(all_subsystems):
+            lines.append(f"- {sub}")
+    else:
+        lines.append("- Unable to determine (no matching subsystem keywords in logs)")
+    lines.append("")
+
+    # 4. Why this project is affected
+    lines.append(f"## 4. Why {project.upper()} Is Affected")
+    if "migration" in " ".join(failing_suites).lower():
+        lines.append(
+            f"Migration-related suites are failing. {project.upper()} relies on "
+            "a stable CPU state serialisation contract between kernel, QEMU, and libvirt. "
+            "A change to any ABI layer can cause migration stream incompatibility."
+        )
+    elif "kvm" in " ".join(failing_suites).lower() or project == "kvm":
+        lines.append(
+            "KVM unit/selftests exercise intercept handling and SIE-level state directly. "
+            "Any change to vcpu struct layout, intercept table, or facility bits "
+            "will surface here first."
+        )
+    else:
+        lines.append(
+            f"{project.upper()} shares the kernel/hypervisor ABI. "
+            "Changes to low-level CPU, memory, or device interfaces propagate upward "
+            "through QEMU and libvirt."
+        )
+    lines.append("")
+
+    # 5. Recommended fix
+    lines.append("## 5. Recommended Fix")
+    if commits:
+        newest = commits[0]
+        lines.append(
+            f"Start by reverting the most recent commit and re-running the failing suites:"
+        )
+        lines.append(f"```bash")
+        lines.append(f"git revert {newest['sha']}  # \"{newest['subject']}\"")
+        lines.append(f"```")
+        lines.append(
+            "If the revert restores green, bisect between the commits above to isolate "
+            "the exact regression. If multiple commits are involved, revert in reverse order."
+        )
+    else:
+        lines.append(
+            "Provide `delta.git_log` and `delta.git_patch` to get a specific revert command. "
+            "Without commit data, use `git bisect` between the last green and current HEAD."
+        )
+    lines.append("")
+
+    # 6. Verification command
+    lines.append("## 6. Verification Command")
+    suite_example = failing_suites[0] if failing_suites else "<suite-name>"
+    lines.append(
+        "Run the smallest failing suite in isolation on tuxmaker to confirm:"
     )
+    lines.append("```bash")
+    lines.append(f"# On tuxmaker:")
+    lines.append(f"cd /home/ciuser && ./run-suite.sh {suite_example} $(git rev-parse HEAD)")
+    lines.append("```")
+    if len(failing_suites) > 1:
+        lines.append(
+            f"Then run the full {project} suite group: "
+            + ", ".join(f"`{s}`" for s in failing_suites)
+        )
 
-    return (
-        f"{persona}\n\n"
-        f"CI RUN CONTEXT\n"
-        f"Failing run: {run_date}  ID {run_id}  "
-        f"Log: {CFG['ci']['log_base']}/{run_date.replace('-','')}/\n"
-        f"Last passing run: day before {run_date}\n\n"
-        f"{git_ctx}\n\n"
-        f"=== FAILURE LOGS ===\n{logs_block}\n\n"
-        f"TASK — answer precisely and concisely:\n"
-        f"1. **Introducing Commit(s)**: Based on the git log and diff above, which specific "
-        f"commit(s) introduced the regression? Give commit hash/subject if visible.\n"
-        f"2. **Root Cause**: Explain in one paragraph exactly what the change broke and why "
-        f"each failing suite fails as a consequence.\n"
-        f"3. **Affected Subsystems**: List the kernel/{project}/libvirt subsystems touched.\n"
-        f"4. **Why {project} is uniquely affected**: Explain the code path in {project} "
-        f"that exercises the changed code.\n"
-        f"5. **Recommended Fix**: Exact revert command, workaround, or code change with file path.\n"
-        f"6. **Verification command**: Single `git bisect` or targeted test on tuxmaker to confirm.\n\n"
-        f"Format with ## headings per section. Reference exact function names, file paths, "
-        f"and line numbers where visible from the diff."
-    )
+    return "\n".join(lines)
 
 
-def build_correlation_prompt(
+def correlate_projects(
     delta: dict,
     kvm_result: str,
     qemu_result: str,
@@ -247,25 +351,80 @@ def build_correlation_prompt(
     run_date: str,
     run_id: str,
 ) -> str:
-    git_ctx = _git_context(delta)
-    return (
-        f"You are a Linux virtualisation stack expert covering KVM kernel, QEMU, "
-        f"and libvirt on IBM s390x.\n\n"
-        f"CI RUN: {run_date} {run_id}\n\n"
-        f"{git_ctx}\n\n"
-        f"=== PER-PROJECT ANALYSES ===\n\n"
-        f"## KVM\n{kvm_result or '(not yet analysed)'}\n\n"
-        f"## QEMU\n{qemu_result or '(not yet analysed)'}\n\n"
-        f"## libvirt\n{libvirt_result or '(not yet analysed)'}\n\n"
-        f"TASK:\n"
-        f"1. **Cross-Project Correlation**: Which failures share the same introducing commit?\n"
-        f"2. **Dependency chain**: Map the cascade (e.g. kernel change → QEMU break → libvirt break).\n"
-        f"3. **Minimum fix set**: Fewest commits to revert/patch to restore all three projects. "
-        f"List each: project · file · action (revert/patch/bump).\n"
-        f"4. **Triage order**: Which fix unblocks the most suites first?\n"
-        f"5. **Reproducer**: Shortest command sequence on tuxmaker to reproduce without full CI.\n\n"
-        f"Format with ## headings. Be concise — output will be filed directly into Bugzilla."
+    """Produce a cross-project correlation report using heuristics only."""
+    commits = _extract_commits(delta.get("git_log", ""))
+
+    lines: list[str] = []
+    lines.append(f"## Cross-Project Correlation  —  Run {run_date}  {run_id}")
+    lines.append("*Generated by CIIQ local engine — no external API*")
+    lines.append("")
+
+    # 1. Shared root cause
+    lines.append("## 1. Cross-Project Correlation")
+    if commits:
+        lines.append(
+            f"All three projects share the same kernel tree. "
+            f"The {len(commits)} commit(s) in the delta are the common suspect(s):"
+        )
+        for c in commits[:5]:
+            lines.append(f"- `{c['sha']}` {c['subject']}")
+    else:
+        lines.append(
+            "No git delta provided. Cross-project root cause cannot be determined "
+            "without commit data. Provide `delta.git_log`."
+        )
+    lines.append("")
+
+    # 2. Dependency chain
+    lines.append("## 2. Dependency Chain")
+    lines.append(
+        "Typical s390x virtualisation stack cascade:\n"
+        "1. **Kernel change** (virt/kvm or arch/s390) alters ABI or CPU state layout\n"
+        "2. **QEMU** fails because KVM_SET/GET_ONE_REG, SIE state, or migration stream no longer matches\n"
+        "3. **libvirt** fails because the QEMU machine type or CPU model reported via QMP has changed"
     )
+    lines.append("")
+
+    # 3. Minimum fix set
+    lines.append("## 3. Minimum Fix Set")
+    if commits:
+        lines.append("Revert in reverse-chronological order:")
+        for i, c in enumerate(commits[:3], 1):
+            lines.append(f"{i}. `git revert {c['sha']}` — \"{c['subject']}\"")
+        lines.append(
+            "\nIf individual reverts conflict, use `git revert -n` then resolve manually."
+        )
+    else:
+        lines.append("Provide `delta.git_log` to generate specific revert commands.")
+    lines.append("")
+
+    # 4. Triage order
+    lines.append("## 4. Triage Order")
+    lines.append(
+        "1. **KVM selftests / kvm-unit-tests** — fastest to run, confirms kernel-level regression\n"
+        "2. **QEMU s390x-kvm** — confirms the userspace→kernel ABI is intact\n"
+        "3. **libvirt-s390x** — confirms domain lifecycle (start/stop/migrate) works end-to-end"
+    )
+    lines.append("")
+
+    # 5. Reproducer
+    lines.append("## 5. Reproducer")
+    lines.append(
+        "Shortest reproducer sequence on tuxmaker (no full CI needed):"
+    )
+    lines.append("```bash")
+    lines.append("# 1. Build kernel at failing SHA")
+    lines.append("cd /home/ciuser/linux && git checkout <failing-sha>")
+    lines.append("make -j$(nproc) ARCH=s390 bzImage")
+    lines.append("")
+    lines.append("# 2. Run KVM selftests (fastest confirmation)")
+    lines.append("tools/testing/selftests/kvm/run_tests.sh -a s390x 2>&1 | grep -E 'PASS|FAIL'")
+    lines.append("")
+    lines.append("# 3. If KVM passes, run QEMU migration smoke test")
+    lines.append("./run-suite.sh qemu-migration-s390 <failing-sha>")
+    lines.append("```")
+
+    return "\n".join(lines)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -277,9 +436,9 @@ def _add_history(project: str, status: str, summary: str) -> None:
     session["ciiq_history"].insert(
         0,
         {
-            "ts": datetime.now().strftime("%H:%M:%S"),
+            "ts":      datetime.now().strftime("%H:%M:%S"),
             "project": project,
-            "status": status,
+            "status":  status,
             "summary": summary[:200],
         },
     )
@@ -289,44 +448,13 @@ def _add_history(project: str, status: str, summary: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 #  Request helpers
 # ─────────────────────────────────────────────────────────────────────────────
-_PLACEHOLDER_VALUES = {
-    "your_ibm_cloud_api_key_here",
-    "your_watsonx_project_id_here",
-    "placeholder",
-    "test-key-placeholder",
-    "test-proj-placeholder",
-}
-
-
-def _resolve_api_key(body: dict) -> str:
-    """Prefer key from request body, fall back to config/env. Returns '' for placeholder values."""
-    val = (
-        body.get("api_key")
-        or WX_CFG.get("api_key")
-        or os.environ.get("CIIQ_WATSONX_API_KEY")
-        or ""
-    )
-    return "" if val in _PLACEHOLDER_VALUES else val
-
-
-def _resolve_project_id(body: dict) -> str:
-    """Prefer project_id from request body, fall back to config/env. Returns '' for placeholders."""
-    val = (
-        body.get("project_id")
-        or WX_CFG.get("project_id")
-        or os.environ.get("CIIQ_WATSONX_PROJECT_ID")
-        or ""
-    )
-    return "" if val in _PLACEHOLDER_VALUES else val
-
-
 def err(msg: str, code: int = 400):
     """Return a standard JSON error response with ok=False."""
     return jsonify({"ok": False, "error": msg}), code
 
 
 def require_json(f):
-    """Decorator: reject requests that are not JSON (Content-Type: application/json)."""
+    """Decorator: reject requests that are not JSON."""
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not request.is_json:
@@ -348,22 +476,15 @@ def index():
 # ─────────────────────────────────────────────────────────────────────────────
 @app.get("/api/config")
 def api_config():
-    """Return sanitised config — no secrets."""
-    wx = CFG.get("watsonx", {})
+    """Return sanitised config."""
     ci = CFG.get("ci", {})
     return jsonify(
         {
             "ok": True,
-            "watsonx": {
-                "region": wx.get("region"),
-                "model": wx.get("model"),
-                "max_tokens": wx.get("max_tokens"),
-                "has_api_key": bool(wx.get("api_key")),
-                "has_project_id": bool(wx.get("project_id")),
-            },
+            "engine": "local",
             "ci": {
-                "log_base": ci.get("log_base"),
-                "webui_base": ci.get("webui_base"),
+                "log_base":      ci.get("log_base"),
+                "webui_base":    ci.get("webui_base"),
                 "tuxmaker_host": ci.get("tuxmaker_host"),
             },
             "projects": {
@@ -375,24 +496,6 @@ def api_config():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Routes — IAM token
-# ─────────────────────────────────────────────────────────────────────────────
-@app.post("/api/token")
-@require_json
-def api_token():
-    body = request.get_json()
-    api_key = _resolve_api_key(body)
-    if not api_key:
-        return err("No API key provided (body.api_key or CIIQ_WATSONX_API_KEY env var)")
-    try:
-        token = get_iam_token(api_key)
-        return jsonify({"ok": True, "token_preview": token[:12] + "…"})
-    except Exception as exc:
-        log.exception("IAM token error")
-        return err(str(exc), 502)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 #  Routes — Single-project analysis
 # ─────────────────────────────────────────────────────────────────────────────
 @app.post("/api/analyse/<project>")
@@ -401,55 +504,28 @@ def api_analyse_project(project: str):
     if project not in ("kvm", "qemu", "libvirt"):
         return err(f"Unknown project '{project}'. Must be kvm, qemu, or libvirt.")
 
-    body = request.get_json()
-    api_key    = _resolve_api_key(body)
-    project_id = _resolve_project_id(body)
-
-    if not api_key:
-        return err("api_key required")
-    if not project_id:
-        return err("project_id required")
-
+    body       = request.get_json()
     delta      = body.get("delta", {})
     suite_logs = body.get("suite_logs", {})
     run_date   = body.get("run_date", datetime.today().strftime("%Y-%m-%d"))
     run_id     = body.get("run_id", "#????")
-    overrides  = body.get("wx_overrides", {})
-    overrides["project_id"] = project_id
 
     if not suite_logs:
         return err("suite_logs is required (dict of suite_name → log_text)")
 
     try:
-        token  = get_iam_token(api_key)
-        prompt = build_project_prompt(project, delta, suite_logs, run_date, run_id)
-        result = wx_generate(prompt, token, overrides)
-
-        if "results" not in result or not result["results"]:
-            raise ValueError(f"Unexpected WatsonX response: {json.dumps(result)[:300]}")
-
-        r0 = result["results"][0]
-        text = r0.get("generated_text", "")
-
+        text = analyse_project(project, delta, suite_logs, run_date, run_id)
         _add_history(project, "ok", text)
         return jsonify(
             {
-                "ok": True,
-                "project": project,
+                "ok":       True,
+                "project":  project,
                 "analysis": text,
-                "model": overrides.get("model", WX_CFG.get("model")),
-                "input_tokens":     r0.get("input_token_count"),
-                "generated_tokens": r0.get("generated_token_count"),
+                "engine":   "local",
                 "run_date": run_date,
                 "run_id":   run_id,
             }
         )
-
-    except requests.HTTPError as exc:
-        msg = f"HTTP {exc.response.status_code}: {exc.response.text[:400]}"
-        _add_history(project, "err", msg)
-        log.exception("WatsonX HTTP error for %s", project)
-        return err(msg, 502)
     except Exception as exc:
         _add_history(project, "err", str(exc))
         log.exception("Analysis error for %s", project)
@@ -462,28 +538,17 @@ def api_analyse_project(project: str):
 @app.post("/api/analyse/all")
 @require_json
 def api_analyse_all():
-    body = request.get_json()
-    api_key    = _resolve_api_key(body)
-    project_id = _resolve_project_id(body)
+    body     = request.get_json()
+    raw_logs = body.get("suite_logs", {})
+    delta    = body.get("delta", {})
+    run_date = body.get("run_date", datetime.today().strftime("%Y-%m-%d"))
+    run_id   = body.get("run_id", "#????")
 
-    if not api_key:
-        return err("api_key required")
-    if not project_id:
-        return err("project_id required")
-
-    delta      = body.get("delta", {})
-    raw_logs   = body.get("suite_logs", {})   # { project: { suite: log } } OR flat { suite: log }
-    run_date   = body.get("run_date", datetime.today().strftime("%Y-%m-%d"))
-    run_id     = body.get("run_id", "#????")
-    overrides  = body.get("wx_overrides", {})
-    overrides["project_id"] = project_id
-
-    # Auto-split flat suite_logs into per-project buckets using config suites
+    # Auto-split flat suite_logs into per-project buckets
     PROJ_SUITES: dict[str, list[str]] = {
         proj: [s["name"] for s in CFG.get("projects", {}).get(proj, {}).get("suites", [])]
         for proj in ("kvm", "qemu", "libvirt")
     }
-    # Detect flat format: if keys are suite names (not project names)
     is_flat = raw_logs and not any(k in raw_logs for k in ("kvm", "qemu", "libvirt"))
     if is_flat:
         all_logs: dict[str, dict] = {"kvm": {}, "qemu": {}, "libvirt": {}}
@@ -497,33 +562,18 @@ def api_analyse_all():
     else:
         all_logs = raw_logs
 
-    results = {}
-    errors  = {}
-    stagger = WX_CFG.get("call_stagger_ms", 500) / 1000.0
-
-    try:
-        token = get_iam_token(api_key)
-    except Exception as exc:
-        return err(f"IAM token error: {exc}", 502)
+    results: dict[str, str] = {}
+    errors:  dict[str, str] = {}
 
     for project in ("kvm", "qemu", "libvirt"):
         suite_logs = all_logs.get(project, {})
         if not suite_logs:
-            log.warning("No suite logs provided for %s — skipping", project)
+            log.warning("No suite logs for %s — skipping", project)
             continue
         try:
-            prompt = build_project_prompt(project, delta, suite_logs, run_date, run_id)
-            resp   = wx_generate(prompt, token, overrides)
-            r0     = resp["results"][0]
-            text   = r0.get("generated_text", "")
-            results[project] = {
-                "analysis":         text,
-                "input_tokens":     r0.get("input_token_count"),
-                "generated_tokens": r0.get("generated_token_count"),
-            }
+            text = analyse_project(project, delta, suite_logs, run_date, run_id)
+            results[project] = text
             _add_history(project, "ok", text)
-            log.info("Completed %s — sleeping %.1fs", project, stagger)
-            time.sleep(stagger)
         except Exception as exc:
             errors[project] = str(exc)
             _add_history(project, "err", str(exc))
@@ -531,10 +581,10 @@ def api_analyse_all():
 
     return jsonify(
         {
-            "ok": True,
-            "results": results,
-            "errors":  errors,
-            "model":   overrides.get("model", WX_CFG.get("model")),
+            "ok":       True,
+            "results":  results,
+            "errors":   errors,
+            "engine":   "local",
             "run_date": run_date,
             "run_id":   run_id,
         }
@@ -547,25 +597,14 @@ def api_analyse_all():
 @app.post("/api/correlate")
 @require_json
 def api_correlate():
-    body = request.get_json()
-    api_key    = _resolve_api_key(body)
-    project_id = _resolve_project_id(body)
-
-    if not api_key:
-        return err("api_key required")
-    if not project_id:
-        return err("project_id required")
-
-    delta      = body.get("delta", {})
-    analyses   = body.get("analyses", {})
-    run_date   = body.get("run_date", datetime.today().strftime("%Y-%m-%d"))
-    run_id     = body.get("run_id", "#????")
-    overrides  = body.get("wx_overrides", {})
-    overrides["project_id"] = project_id
+    body     = request.get_json()
+    delta    = body.get("delta", {})
+    analyses = body.get("analyses", {})
+    run_date = body.get("run_date", datetime.today().strftime("%Y-%m-%d"))
+    run_id   = body.get("run_id", "#????")
 
     try:
-        token  = get_iam_token(api_key)
-        prompt = build_correlation_prompt(
+        text = correlate_projects(
             delta,
             analyses.get("kvm", ""),
             analyses.get("qemu", ""),
@@ -573,25 +612,8 @@ def api_correlate():
             run_date,
             run_id,
         )
-        result = wx_generate(prompt, token, overrides)
-        r0     = result["results"][0]
-        text   = r0.get("generated_text", "")
-
         _add_history("correlation", "ok", text)
-        return jsonify(
-            {
-                "ok": True,
-                "correlation": text,
-                "model": overrides.get("model", WX_CFG.get("model")),
-                "input_tokens":     r0.get("input_token_count"),
-                "generated_tokens": r0.get("generated_token_count"),
-            }
-        )
-
-    except requests.HTTPError as exc:
-        msg = f"HTTP {exc.response.status_code}: {exc.response.text[:400]}"
-        _add_history("correlation", "err", msg)
-        return err(msg, 502)
+        return jsonify({"ok": True, "correlation": text, "engine": "local"})
     except Exception as exc:
         _add_history("correlation", "err", str(exc))
         log.exception("Correlation error")
@@ -647,13 +669,13 @@ def api_run_suites(date: str):
                             try:
                                 with open(fpath, errors="replace") as f:
                                     lines = [
-                                        l.rstrip()
-                                        for l in f
+                                        ln.rstrip()
+                                        for ln in f
                                         if re.search(
                                             r"(FAIL|FAILED|BUG|Oops|panic|assert|ERROR|"
                                             r"error:|No such|Invalid argument|unexpected|"
                                             r"timeout|abort)",
-                                            l,
+                                            ln,
                                             re.IGNORECASE,
                                         )
                                     ]

@@ -1,11 +1,12 @@
 # 🔎 PatchIQ
 
-> **AI-powered patch review for the KVM and Linux open source stack.**  
-> From kernel to QEMU to libvirt — reviews code the way an upstream maintainer would.
+> **Local AI-powered patch review for the KVM and Linux open source stack.**  
+> From kernel to QEMU to libvirt — reviews code the way an upstream maintainer would.  
+> **No credentials or internet access required.**
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![watsonx](https://img.shields.io/badge/AI-watsonx%20Granite-blue.svg)](https://www.ibm.com/watsonx)
+[![Engine: Local](https://img.shields.io/badge/engine-local%20heuristic-brightgreen.svg)](#)
 
 ---
 
@@ -16,19 +17,29 @@ PatchIQ is a developer-side patch review tool for the IBM KVM & Linux open sourc
 | Output | Description |
 |--------|-------------|
 | **Style findings** | Deterministic rule-based checks per layer (kernel/KVM, QEMU, libvirt) |
-| **AI narrative** | watsonx Granite summary + actionable suggestions |
+| **Narrative summary** | Local heuristic analysis — locking, memory, security, test coverage |
+| **Actionable suggestions** | Up to 5 targeted improvement hints per patch |
 | **Patch score** | 0–100 quality score (errors −20, warnings −8, info −2) |
 | **HTML report** | Self-contained report you can share or archive |
 
-PatchIQ runs fully offline for style checks. The watsonx AI narrative is optional and requires IBM Cloud credentials.
+PatchIQ runs **fully offline** — no API keys, no internet connection, no wait time.
+
+### Two editions
+
+| Edition | Engine | File | Notes |
+|---------|--------|------|-------|
+| **Local** (default) | Heuristic pattern analysis | `analyzer.py` | No credentials needed |
+| **watsonx** | IBM Granite via watsonx.ai | `analyzer-wx.py` | Requires IBM Cloud API key |
+
+To use the watsonx edition, swap `analyzer.py` ↔ `analyzer-wx.py` and run `run_review-wx.sh`.
 
 ---
 
 ## Requirements
 
 - Python 3.8 or higher
-- `pip install requests`
-- *(Optional)* IBM Cloud API key + watsonx project ID for AI review
+- No additional dependencies for local mode
+- *(watsonx edition only)* `pip install requests` + IBM Cloud credentials
 
 ---
 
@@ -36,27 +47,20 @@ PatchIQ runs fully offline for style checks. The watsonx AI narrative is optiona
 
 ```bash
 # 1. Clone the repo
-git clone git@github.ibm.com:cheruiyo/Watsonx_challenge_2026.git
-cd Watsonx_challenge_2026
+git clone git@github.ibm.com:cheruiyo/us-kvm-status.git
+cd us-kvm-status/kvm
 
-# 2. Install the one runtime dependency
-pip install requests
+# 2. Review your latest commit (no setup needed)
+./patchiq/run_review.sh
 
-# 3. (Optional) Enable watsonx AI review
-export WATSONX_API_KEY="your-ibm-cloud-api-key"
-export WATSONX_PROJECT_ID="your-watsonx-project-id"
+# 3. Review a patch file
+./patchiq/run_review.sh my_fix.patch
 
-# 4. Review your latest commit
-./run_review.sh
+# 4. Review a commit range before pushing
+./patchiq/run_review.sh origin/main..HEAD
 
-# 5. Review a patch file
-./run_review.sh my_fix.patch
-
-# 6. Review a commit range before pushing
-./run_review.sh origin/main..HEAD
-
-# 7. Pipe a diff directly
-git diff HEAD~1 | ./run_review.sh
+# 5. Pipe a diff directly
+git diff HEAD~1 | ./patchiq/run_review.sh
 ```
 
 Each run prints a terminal report and saves a timestamped HTML file (e.g. `patchiq_review_20260714_094500.html`). On macOS the script offers to open it in your browser automatically.
@@ -79,169 +83,141 @@ python3 -m patchiq.cli pipe                 [--html out.html]
 | `patch` | A `.patch` file on disk | `python3 -m patchiq.cli patch fix.patch` |
 | `commit` | A git ref (default: `HEAD`) | `python3 -m patchiq.cli commit HEAD~2` |
 | `range` | A git range | `python3 -m patchiq.cli range origin/main..HEAD` |
-| `pipe` | Diff from stdin | `git diff HEAD~1 \| python3 -m patchiq.cli pipe` |
-
-Add `--html report.html` to any command to save the full HTML report.
+| `pipe` | stdin unified diff | `git diff HEAD~1 \| python3 -m patchiq.cli pipe` |
 
 ---
 
-## How it works
-
-PatchIQ runs a four-stage pipeline on every patch:
-
-```
-raw unified diff
-    │
-    ▼
-parse_diff()      — split into per-file hunks, extract Subject header
-    │
-    ▼
-detect_layer()    — classify each file: kernel | qemu | libvirt | unknown
-    │
-    ▼
-run_rules()       — deterministic style checks per layer
-    │
-    ▼
-ai_review()       — watsonx Granite 13B: summary + suggestions (optional)
-    │
-    ▼
-ReviewResult      — findings + score + HTML report
-```
-
-Layer detection is **automatic** based on file paths in the diff:
-
-| Path pattern | Layer |
-|---|---|
-| `virt/kvm/`, `arch/s390/`, `arch/x86/`, `drivers/vfio/`, `include/linux/` | **kernel** |
-| `hw/virtio/`, `hw/s390x/`, `hw/vfio/`, `target/s390x/`, `migration/` | **qemu** |
-| `src/qemu/`, `src/conf/`, `src/util/`, `src/libvirt/` | **libvirt** |
-| Any `.c` / `.h` not matched above | **kernel** (fallback) |
-
-Multi-layer patches (e.g. kernel + QEMU in the same commit) are handled automatically — each file gets its own layer and the correct rules applied.
-
----
-
-## Rule coverage
-
-### Kernel / KVM
-| ID | Severity | Description |
-|----|----------|-------------|
-| K001 | warning | Prefer `pr_info` / `pr_err` / `pr_debug` over bare `printk()` |
-| K002 | info | Direct return after allocation — consider `goto` for cleanup |
-| K003 | warning | `ioremap` result should be assigned to an `__iomem` pointer |
-| K004 | warning | `vcpu->arch` / `vcpu->regs` write without visible lock acquisition |
-
-### QEMU
-| ID | Severity | Description |
-|----|----------|-------------|
-| Q001 | warning | `error_free()` discards errors — use `error_propagate()` instead |
-| Q002 | info | Prefer `g_new0(Type, n)` over `g_malloc0(sizeof(Type))` |
-| Q003 | info | Prefer `g_assert_not_reached()` over `assert(0)` / `abort()` |
-| Q004 | warning | More `object_unref()` calls than `object_ref()` — possible double-free |
-
-### libvirt
-| ID | Severity | Description |
-|----|----------|-------------|
-| L001 | warning | Use `virReportError()` instead of `fprintf(stderr, ...)` |
-| L002 | info | `VIR_ALLOC` used but no `cleanup:` label found |
-| L003 | warning | Use `virStrdup()` instead of bare `strdup()` |
+## Style rules
 
 ### Universal (all layers)
+
 | ID | Severity | Description |
 |----|----------|-------------|
-| U001 | warning | Line exceeds character limit (100 for kernel/libvirt, 80 for QEMU) |
+| U001 | warning | Line exceeds 100 characters |
 | U002 | warning | Trailing whitespace |
-| U003 | info | Unresolved `TODO` / `FIXME` / `HACK` / `XXX` marker |
+| U003 | info | TODO / FIXME left in added code |
 
----
+### Kernel / KVM (K-rules)
 
-## watsonx AI review
+| ID | Severity | Description |
+|----|----------|-------------|
+| K001 | warning | Bare `printk()` — use `pr_err` / `pr_warn` / `pr_info` |
+| K002 | warning | Error path without `goto` label |
+| K003 | info | Missing `__user`, `__iomem`, or `__must_check` sparse annotation |
+| K004 | error | `vcpu->arch/regs/sregs` mutated without vcpu lock comment |
 
-When `WATSONX_API_KEY` and `WATSONX_PROJECT_ID` are set, PatchIQ calls the watsonx text generation API:
+### QEMU (Q-rules)
 
-- **Model:** `ibm/granite-13b-chat-v2` (override with `WATSONX_MODEL` env var)
-- **Endpoint:** `https://us-south.ml.cloud.ibm.com` (override with `WATSONX_URL`)
-- **Input:** Up to 6 files, 120 lines each, with a kernel-expert system prompt
-- **Output:** JSON with `summary` (string) and `suggestions` (list)
+| ID | Severity | Description |
+|----|----------|-------------|
+| Q001 | warning | Error without `error_setg` / `error_propagate` |
+| Q002 | info | `g_malloc0` — prefer `g_new0(Type, n)` |
+| Q003 | warning | `assert(0)` — use `qemu_build_not_reached()` |
+| Q004 | info | `object_ref` without paired `object_unref` |
 
-Without credentials, style checks run in full and the AI section shows a graceful skip message.
+### libvirt (L-rules)
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| L001 | warning | `fprintf` to stderr — use `virReportError` |
+| L002 | warning | Early return without `cleanup:` label pattern |
+| L003 | info | `strdup` — use `virStrdup` for auto-error-reporting |
 
 ---
 
 ## Scoring
 
-Each finding deducts points from 100:
+```
+score = max(0,  100
+              − (errors   × 20)
+              − (warnings ×  8)
+              − (info     ×  2))
+```
 
-| Severity | Deduction |
-|----------|-----------|
-| error | −20 |
-| warning | −8 |
-| info | −2 |
-
-Score is floored at 0. A patch with no findings scores **100/100**.
+A clean patch scores **100/100**. Non-C files (YAML, shell, Markdown) score 100 by design.
 
 ---
 
-## Project structure
+## Local heuristic engine
 
-```
-Watsonx_challenge_2026/
-├── patchiq/
-│   ├── __init__.py          package init (version 0.1.0)
-│   ├── analyzer.py          diff parser + watsonx AI review engine
-│   ├── rules.py             per-layer style rule definitions
-│   ├── cli.py               command-line interface (4 subcommands)
-│   ├── report.py            self-contained HTML report generator
-│   ├── run_review.sh        shell convenience wrapper
-│   ├── README.md            this file
-│   └── tests/
-│       ├── __init__.py
-│       ├── test_rules.py    unit tests — every K/Q/L/U rule
-│       ├── test_analyzer.py unit + integration tests — pipeline
-│       └── fixtures/
-│           ├── kernel.patch
-│           ├── qemu.patch
-│           └── libvirt.patch
-```
+The default `analyzer.py` analyses added lines with regex pattern banks:
+
+| Pattern bank | What it detects |
+|---|---|
+| Security | `copy_from_user`, `copy_to_user`, `__user`, `kmalloc`, mutex/spinlock/RCU |
+| Locking | `mutex`, `spinlock`, `rwlock`, `semaphore`, `rcu` |
+| Memory | `kmalloc`, `kzalloc`, `vzalloc`, `kfree` |
+| Error | `ENOMEM`, `EINVAL`, `goto *err`, `return -E*` |
+| IOCTL | `KVM_*`, `VFIO_*`, `ioctl` |
+| Tests | `assert`, `kselftest`, `kunit_test`, `g_assert` |
+
+Suggestions are generated based on pattern co-occurrence — e.g. allocation without error path, locking + user-copy, large patch without tests.
 
 ---
 
-## Running the tests
+## watsonx edition
+
+The `-wx` files are the original watsonx-backed versions:
 
 ```bash
-pip install pytest
-python3 -m pytest tests/ -v
+# Swap in the watsonx engine
+cp patchiq/analyzer-wx.py patchiq/analyzer.py   # or run from analyzer-wx.py directly
+
+# Set credentials
+export WATSONX_API_KEY="..."
+export WATSONX_PROJECT_ID="..."
+
+# Run
+./patchiq/run_review-wx.sh
 ```
 
-The test suite has **68 tests** covering every rule (positive and negative cases), the diff parser, layer detection, scoring logic, and end-to-end pipeline with fixture patches. No network access or watsonx credentials are required to run the tests.
+The watsonx edition calls `ibm/granite-3-8b-instruct` via `us-south.ml.cloud.ibm.com` and requires an IBM Cloud API key and watsonx project ID.
 
 ---
 
-## Git alias (optional)
+## File structure
 
-Add to `~/.gitconfig` for one-keystroke reviews from any repo:
-
-```ini
-[alias]
-    review = "!f() { cd $(git rev-parse --show-toplevel) && python3 -m patchiq.cli range ${1:-HEAD~1..HEAD} --html /tmp/patchiq_review.html && open /tmp/patchiq_review.html; }; f"
 ```
+patchiq/
+├── __init__.py              version 0.2.0
+├── analyzer.py              Local heuristic engine (no credentials needed)
+├── analyzer-wx.py           watsonx Granite edition (preserved)
+├── rules.py                 14 style rules (K001–K004, Q001–Q004, L001–L003, U001–U003)
+├── cli.py                   4 subcommands: patch / commit / range / pipe
+├── report.py                HTML report generator
+├── run_review.sh            Shell wrapper — local engine, no .env needed
+├── run_review-wx.sh         Shell wrapper — watsonx edition (auto-loads .env)
+├── build_pptx.py            16-slide PPTX deck builder
+├── PatchIQ_Presentation_2026.pptx
+├── pyproject.toml           PEP 517 packaging, ruff/pytest config
+├── requirements.txt         (empty for local mode — stdlib only)
+├── requirements-dev.txt     pytest, ruff, pre-commit
+├── .env.example             Credentials template (watsonx edition)
+├── LICENSE                  MIT
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── .pre-commit-config.yaml  ruff lint+format hooks
+├── .github/workflows/ci.yml Python 3.8–3.12 matrix
+└── tests/
+    ├── test_rules.py        36 rule unit tests
+    ├── test_analyzer.py     32 analyzer/pipeline tests
+    └── fixtures/
+        ├── kernel.patch     triggers K001–K004, U001–U003 → 56/100
+        ├── qemu.patch       triggers Q001–Q004, U003 → 78/100
+        └── libvirt.patch    triggers L001–L003 → 82/100
+```
+
+---
+
+## Running tests
 
 ```bash
-git review                  # review last commit
-git review HEAD~5..HEAD     # review last 5 commits
+cd kvm
+python3 -m pytest patchiq/tests/ -v
+# 68 tests — all pass, no external dependencies
 ```
 
 ---
 
-## Contributing
-
-To add a new rule:
-
-1. Add a `check_*()` function to [`rules.py`](rules.py) following the existing pattern
-2. Register it in the appropriate `RULE_SETS` list
-3. Add a positive and negative unit test in [`tests/test_rules.py`](tests/test_rules.py)
-4. Add a fixture line to the relevant patch in [`tests/fixtures/`](tests/fixtures/)
-
----
-
-*PatchIQ — Built for the watsonx challenge 2026 by the IBM KVM & Linux open source team.*
+*PatchIQ — IBM KVM & Linux open source team*  
+*Made with IBM Bob*

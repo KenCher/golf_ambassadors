@@ -1,15 +1,12 @@
 #!/bin/bash
 # ──────────────────────────────────────────────────────────────
 #  PatchIQ — Run a patch review from the command line
-#  (local mode — no external API or credentials required)
 #
 #  Usage:
 #    ./patchiq/run_review.sh                    # review HEAD commit
 #    ./patchiq/run_review.sh my_fix.patch       # review a patch file
 #    ./patchiq/run_review.sh origin/main..HEAD  # review a commit range
 #    git diff HEAD~1 | ./patchiq/run_review.sh  # pipe a diff
-#
-#  For the watsonx-powered variant use: run_review-wx.sh
 # ──────────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -18,33 +15,54 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 HTML_OUT="patchiq_review_$(date '+%Y%m%d_%H%M%S').html"
 
+# Auto-load .env if present (supports watsonx credentials)
+if [ -f "${SCRIPT_DIR}/.env" ]; then
+    set -o allexport
+    # shellcheck disable=SC1091
+    source "${SCRIPT_DIR}/.env"
+    set +o allexport
+fi
+
 echo ""
 echo "╔══════════════════════════════════════════════════════════╗"
-echo "║         🔎 PatchIQ — Local Patch Reviewer               ║"
-echo "║    KVM · Kernel · QEMU · libvirt  (no API required)     ║"
+echo "║         🔎 PatchIQ — AI Patch Reviewer                  ║"
+echo "║    KVM · Kernel · QEMU · libvirt                         ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
+
+# Validate watsonx env vars (warn, not block)
+if [ -z "${WATSONX_API_KEY:-}" ] || [ -z "${WATSONX_PROJECT_ID:-}" ]; then
+    echo "⚠️  WATSONX_API_KEY / WATSONX_PROJECT_ID not set"
+    echo "   Style checks will run but AI review will be skipped."
+    echo "   Export both env vars to enable the watsonx AI review."
+    echo ""
+fi
 
 cd "$REPO_ROOT"
 
 # ── determine mode ─────────────────────────────────────────────
 if [ ! -t 0 ]; then
+    # stdin has data — pipe mode
     echo "📥 Reading diff from stdin..."
     python3 -m patchiq.cli pipe --html "$HTML_OUT"
 
 elif [ "${1:-}" = "" ]; then
+    # No argument — default to HEAD
     echo "📌 Reviewing HEAD commit..."
     python3 -m patchiq.cli commit HEAD --html "$HTML_OUT"
 
 elif [[ "${1:-}" == *..* ]]; then
+    # Looks like a git range
     echo "📌 Reviewing range: $1"
     python3 -m patchiq.cli range "$1" --html "$HTML_OUT"
 
 elif [ -f "${1:-}" ]; then
+    # It's a file
     echo "📄 Reviewing patch file: $1"
     python3 -m patchiq.cli patch "$1" --html "$HTML_OUT"
 
 else
+    # Treat as a git ref
     echo "📌 Reviewing commit: $1"
     python3 -m patchiq.cli commit "${1:-HEAD}" --html "$HTML_OUT"
 fi

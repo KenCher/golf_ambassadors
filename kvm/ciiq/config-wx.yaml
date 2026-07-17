@@ -1,8 +1,22 @@
-# ─────────────────────────────────────────────────────────────
-#  CIIQ — Team Configuration File  (local / no-API edition)
-#  Edit once; all team members share it.
-#  For the watsonx-backed variant see: config-wx.yaml
-# ─────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────
+#  CIIQ — Team Configuration File
+#  Edit this file once; all team members share it.
+#  Never commit real API keys — use env vars instead.
+# ─────────────────────────────────────────────────
+
+watsonx:
+  # IBM Cloud API key — override with env var CIIQ_WATSONX_API_KEY
+  api_key: "${CIIQ_WATSONX_API_KEY}"
+  # WatsonX project ID — override with env var CIIQ_WATSONX_PROJECT_ID
+  project_id: "${CIIQ_WATSONX_PROJECT_ID}"
+  # Region: us-south | eu-de | eu-gb | jp-tok
+  region: "us-south"
+  # Model to use for analysis
+  model: "ibm/granite-3-8b-instruct"
+  # Max tokens for generated output
+  max_tokens: 2048
+  # Stagger delay (ms) between per-project calls to avoid rate limits
+  call_stagger_ms: 500
 
 ci:
   # Base log directory on tuxmaker
