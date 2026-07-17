@@ -114,6 +114,7 @@ WX_CFG = CFG.get("watsonx", {})
 
 
 def wx_endpoint(region: str, custom_url: str = "") -> str:
+    """Return the full WatsonX text generation URL for a given region or custom endpoint."""
     if custom_url:
         return custom_url
     return (
@@ -309,6 +310,7 @@ def _resolve_api_key(body: dict) -> str:
 
 
 def _resolve_project_id(body: dict) -> str:
+    """Prefer project_id from request body, fall back to config/env. Returns '' for placeholders."""
     val = (
         body.get("project_id")
         or WX_CFG.get("project_id")
@@ -319,10 +321,12 @@ def _resolve_project_id(body: dict) -> str:
 
 
 def err(msg: str, code: int = 400):
+    """Return a standard JSON error response with ok=False."""
     return jsonify({"ok": False, "error": msg}), code
 
 
 def require_json(f):
+    """Decorator: reject requests that are not JSON (Content-Type: application/json)."""
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not request.is_json:

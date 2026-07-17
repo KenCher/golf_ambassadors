@@ -22,7 +22,7 @@ jobs:
       - run: ruff format --check kvm/ciiq/
 
   smoke-test:
-    name: Smoke test (Python ${{ matrix.python-version }})
+    name: Verify app imports and smoke test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

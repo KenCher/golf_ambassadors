@@ -8,6 +8,12 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed
+- `app.py`: add docstrings to `wx_endpoint`, `_resolve_project_id`, `err`, `require_json`
+  (addresses Granite AI suggestion from live PatchIQ review of the codebase)
+- `.github/workflows/ci.yml`: rename smoke-test job to
+  "Verify app imports and smoke test" for clearer GitHub Actions display
+
 ---
 
 ## [0.1.0] — 2026-07-16
