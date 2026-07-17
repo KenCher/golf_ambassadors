@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  CIIQ — Orchestrate / Agentic Edition Config
+#  Uses watsonx tool-calling (llama-3-3-70b-instruct) for multi-turn ReAct loop.
+#  For the standard watsonx edition see: config-wx.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+
+watsonx:
+  api_key:    "${CIIQ_WATSONX_API_KEY}"
+  project_id: "${CIIQ_WATSONX_PROJECT_ID}"
+  region:     "us-south"
+
+  # Agentic model — must support OpenAI-compatible tool calling
+  # llama-3-3-70b-instruct confirmed working on this project
+  agent_model: "meta-llama/llama-3-3-70b-instruct"
+
+  # Fallback for single-prompt analysis (no tool calling needed)
+  fallback_model: "ibm/granite-3-8b-instruct"
+
+  max_tokens:       1200
+  max_agent_turns:  8      # max ReAct iterations per analysis
+  call_stagger_ms:  300    # delay between KVM/QEMU/libvirt calls
+
+ci:
+  log_base:       "/home/ciuser/logs/daily"
+  webui_base:     "https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run"
+  tuxmaker_host:  "tuxmaker"
+  tuxmaker_user:  "ciuser"
+  kernel_repo:    "/home/ciuser/linux"
+
+projects:
+  kvm:
+    suites:
+      - { name: "canton-prototype",    category: "kernel",  default_status: "FAIL" }
+      - { name: "ci-reipl",            category: "infra",   default_status: "FAIL" }
+      - { name: "hades",               category: "kernel",  default_status: "FAIL" }
+      - { name: "hades-monolithic",    category: "kernel",  default_status: "FAIL" }
+      - { name: "hades-withHW",        category: "hw",      default_status: "FAIL" }
+      - { name: "kvm-selftests",       category: "test",    default_status: "FAIL" }
+      - { name: "kvm-unit-tests-kvm",  category: "test",    default_status: "FAIL" }
+      - { name: "s390-tools",          category: "config",  default_status: "FAIL" }
+  qemu:
+    suites:
+      - { name: "qemu-s390x-kvm",      category: "kernel",  default_status: "FAIL" }
+      - { name: "qemu-migration-s390", category: "config",  default_status: "FAIL" }
+      - { name: "qemu-unit-tests",     category: "test",    default_status: "PASS" }
+      - { name: "qemu-tcg-s390x",      category: "test",    default_status: "PASS" }
+  libvirt:
+    suites:
+      - { name: "libvirt-s390x",       category: "config",  default_status: "FAIL" }
+      - { name: "libvirt-migration",   category: "config",  default_status: "FAIL" }
+      - { name: "libvirt-qemu-driver", category: "kernel",  default_status: "FAIL" }
+      - { name: "libvirt-unit-tests",  category: "test",    default_status: "PASS" }
+
+server:
+  host:       "0.0.0.0"
+  port:       5200          # different port to run alongside other editions
+  debug:      false
+  secret_key: "${CIIQ_SECRET_KEY}"

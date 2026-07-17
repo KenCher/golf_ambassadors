@@ -4,3 +4,4 @@ requests>=2.31.0
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
 gunicorn>=21.2.0
+ibm-watsonx-ai>=1.6.0
