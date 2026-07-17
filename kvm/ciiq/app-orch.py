@@ -303,14 +303,17 @@ def _tool_draft_bugzilla_comment(
     scan   = json.loads(scan_result)   if scan_result   else {}
     commit = json.loads(commit_result) if commit_result else {}
     corr   = json.loads(correlation_result) if correlation_result else {}
+    if not isinstance(corr, dict): corr = {}
 
-    top    = commit.get("top_suspect")  or corr.get("likely_root_commit") or {}
-    sigs   = scan.get("error_sigs",  {})
-    subs   = scan.get("subsystems",  [])
-    samples= scan.get("sample_lines", [])
-    fix    = corr.get("minimum_fix",  commit.get("top_suspect") and
-             f"git revert {commit['top_suspect']['sha']}" or
-             "Bisect between last-good and current HEAD")
+    top    = commit.get("top_suspect") or corr.get("likely_root_commit") or {}
+    if not isinstance(top, dict): top = {}
+    sigs   = scan.get("error_sigs",  {}) if isinstance(scan, dict) else {}
+    subs   = scan.get("subsystems",  []) if isinstance(scan, dict) else []
+    samples= scan.get("sample_lines", []) if isinstance(scan, dict) else []
+    ts     = top if isinstance(top, dict) and top.get("sha") else None
+    fix    = (corr.get("minimum_fix")
+              or (f"git revert {ts['sha']}  # \"{ts['subject']}\""
+                  if ts else "Bisect between last-good and current HEAD"))
 
     lines = [
         f"## CI Failure Report — Run {run_date}  {run_id}  [{project.upper()}]",
@@ -474,14 +477,15 @@ You are CIIQ Agent, an expert CI failure analyst for IBM KVM, QEMU, and libvirt 
 
 You have four tools: scan_ci_logs, extract_git_commits, correlate_failures, draft_bugzilla_comment.
 
-For each analysis you MUST follow this plan:
-1. Call scan_ci_logs for EACH failing suite provided (one call per suite).
-2. Call extract_git_commits with the git log to identify the introducing commit.
-3. If analysing all three projects, call correlate_failures with all scan results.
-4. Call draft_bugzilla_comment with all gathered evidence to produce the final output.
+Follow this EXACT sequence — call each tool in order, never skip a step:
+Step 1: Call scan_ci_logs once for EACH failing suite listed (one call per suite).
+Step 2: Call extract_git_commits with the git log text and project name.
+Step 3: Call correlate_failures with all scan results and commit result as JSON strings. Use "{}" for missing projects.
+Step 4: Call draft_bugzilla_comment ONCE with results from steps 1, 2, and 3.
+Step 5: Output the "comment" field from step 4 as your final text reply.
 
-Do not produce a final text response until draft_bugzilla_comment has been called.
-Be precise — reference exact suite names, SHA hashes, and error signatures from the tool results.
+IMPORTANT: You MUST call correlate_failures before draft_bugzilla_comment.
+Do NOT produce any text response until after step 4 completes.
 """
 
 
@@ -502,15 +506,24 @@ def _agent_loop(
     trace   = []
 
     for turn in range(max_turns):
-        resp = requests.post(wx_url, headers=headers, json={
-            "model_id":   model,
-            "project_id": project_id,
-            "messages":   messages,
-            "tools":      _AGENT_TOOLS,
-            "tool_choice": "auto",
-            "parameters": {"max_new_tokens": int(WX_CFG.get("max_tokens", 1200))},
-        }, timeout=90)
-        resp.raise_for_status()
+        for _retry in range(4):
+            resp = requests.post(wx_url, headers=headers, json={
+                "model_id":   model,
+                "project_id": project_id,
+                "messages":   messages,
+                "tools":      _AGENT_TOOLS,
+                "tool_choice": "auto",
+                "parameters": {"max_new_tokens": int(WX_CFG.get("max_tokens", 1200))},
+            }, timeout=120)
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", 30)) + 5
+                log.warning("Rate limited — waiting %ds before retry %d/3", wait, _retry+1)
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            break
+        else:
+            raise RuntimeError("Exceeded rate-limit retries")
 
         data = resp.json()
         msg  = data["choices"][0]["message"]
