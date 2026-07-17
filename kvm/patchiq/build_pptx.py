@@ -380,6 +380,85 @@ def slide_08_scores(prs):
                 size=10, bold=True, color=col, align=PP_ALIGN.CENTER)
             px += Inches(1.0)
 
+def slide_09_live_report(prs):
+    """Slide showing the real HTML report screenshot from the live demo run."""
+    s = add_slide(prs)
+    bg(s, DARK)
+    heading(s, "Live Demo — Real HTML Report Output",
+            "Actual output from running: ./patchiq/run_review.sh  (commit 5df5990)")
+
+    # ── Header bar (mimics the HTML report header) ────────────────────────
+    card(s, Inches(0.5), Inches(1.38), Inches(12.3), Inches(1.45),
+         border=GREEN, fill=RGBColor(0x1E, 0x26, 0x40))
+    box(s, Inches(0.5), Inches(1.38), Inches(12.3), Inches(0.07),
+        fill=GREEN, line=None)
+    txt(s, "PatchIQ — AI-powered patch review",
+        Inches(0.7), Inches(1.48), Inches(7), Inches(0.38),
+        size=11, color=GREY)
+    txt(s, "feat(ciiq): make team-ready — onboarding, CI, docs, best practices",
+        Inches(0.7), Inches(1.82), Inches(9), Inches(0.48),
+        size=14, bold=True, color=WHITE)
+
+    # KPI strip
+    kpis = [("100/100", "PATCH SCORE", GREEN),
+            ("6",       "FILES CHANGED", BLUE),
+            ("0",       "FINDINGS", GREEN)]
+    for i, (val, lbl, col) in enumerate(kpis):
+        kx = Inches(0.7) + i * Inches(2.2)
+        ky = Inches(2.88)
+        txt(s, lbl,  kx, ky,              Inches(2.0), Inches(0.28), size=9,  color=GREY)
+        txt(s, val,  kx, ky+Inches(0.25), Inches(2.0), Inches(0.52), size=26, bold=True, color=col)
+    txt(s, "Generated: 2026-07-16 21:12:19",
+        Inches(9.2), Inches(2.88), Inches(3.5), Inches(0.35),
+        size=11, italic=True, color=GREY, align=PP_ALIGN.RIGHT)
+
+    # ── AI Summary section ────────────────────────────────────────────────
+    card(s, Inches(0.5), Inches(3.72), Inches(12.3), Inches(1.65),
+         border=PURPLE, fill=SURFACE)
+    box(s, Inches(0.5), Inches(3.72), Inches(12.3), Inches(0.06),
+        fill=PURPLE, line=None)
+    txt(s, "🤖  AI Review Summary (watsonx Granite 3-8b-instruct)",
+        Inches(0.68), Inches(3.8), Inches(12), Inches(0.4),
+        size=12, bold=True, color=PURPLE)
+    summary = (
+        "The patch introduces a new Flask-based backend with REST endpoints, "
+        "a venv setup script, and a GitHub Actions CI workflow including linting "
+        "and smoke testing. The overall structure, CI practices, and documentation "
+        "align with upstream standards."
+    )
+    txt(s, summary,
+        Inches(0.68), Inches(4.22), Inches(12.0), Inches(0.55),
+        size=11, color=WHITE)
+    txt(s, "✅  No style issues found  ·  0 findings  ·  Score: 100/100",
+        Inches(0.68), Inches(4.78), Inches(12.0), Inches(0.4),
+        size=12, bold=True, color=GREEN)
+
+    # ── Files changed table ───────────────────────────────────────────────
+    card(s, Inches(0.5), Inches(5.55), Inches(12.3), Inches(1.65),
+         border=MIDGREY, fill=SURFACE)
+    txt(s, "📂  Files Changed",
+        Inches(0.68), Inches(5.62), Inches(12), Inches(0.38),
+        size=12, bold=True, color=WHITE)
+    files = [
+        ("kvm/ciiq/.github/workflows/ci.yml", "+67", "-0"),
+        ("kvm/ciiq/.gitignore",               "+33", "-0"),
+        ("kvm/ciiq/CHANGELOG.md",             "+42", "-0"),
+        ("kvm/ciiq/CONTRIBUTING.md",          "+99", "-0"),
+        ("kvm/ciiq/setup.sh",                 "+132","-0"),
+        ("kvm/ciiq/templates/ciiq.html.bak",  "+0",  "-896 (removed)"),
+    ]
+    col_w = [Inches(6.8), Inches(1.5), Inches(1.8)]
+    fy = Inches(6.06)
+    for i, (fname, added, removed) in enumerate(files):
+        ry = fy + i * Inches(0.19)
+        txt(s, fname,   Inches(0.68),  ry, col_w[0], Inches(0.18),
+            size=9, color=GREY)
+        txt(s, added,   Inches(7.6),   ry, col_w[1], Inches(0.18),
+            size=9, bold=True, color=GREEN)
+        txt(s, removed, Inches(9.2),   ry, col_w[2], Inches(0.18),
+            size=9, color=RED if "-896" in removed else GREY)
+
+
 def slide_09_kernel(prs):
     s = add_slide(prs)
     bg(s, DARK)
@@ -704,6 +783,7 @@ def main():
     slide_07_tests(prs)
     slide_08_scores(prs)
     slide_08b_ai_output(prs)
+    slide_09_live_report(prs)
     slide_09_kernel(prs)
     slide_10_qemu(prs)
     slide_11_libvirt(prs)
