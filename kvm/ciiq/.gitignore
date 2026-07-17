@@ -1,0 +1,33 @@
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# ── Virtual environment ───────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Secrets — NEVER commit these ─────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Runtime artefacts ────────────────────────────────────────────
+*.log
+.ciiq.pid
+ciiq_delta_*.json
+ciiq_delta_*.txt
+
+# ── OS / editor ───────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# ── Backup files ─────────────────────────────────────────────────
+*.bak

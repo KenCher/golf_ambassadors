@@ -1,0 +1,67 @@
+name: CIIQ CI
+
+on:
+  push:
+    branches: ["main", "dev"]
+    paths: ["kvm/ciiq/**"]
+  pull_request:
+    branches: ["main"]
+    paths: ["kvm/ciiq/**"]
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check kvm/ciiq/
+      - run: ruff format --check kvm/ciiq/
+
+  smoke-test:
+    name: Smoke test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    defaults:
+      run:
+        working-directory: kvm/ciiq
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Verify app imports cleanly
+        run: |
+          # Stub credentials so load_dotenv doesn't fail
+          export CIIQ_WATSONX_API_KEY=test-key-placeholder
+          export CIIQ_WATSONX_PROJECT_ID=test-proj-placeholder
+          export CIIQ_SECRET_KEY=test-secret
+          python -c "import app; print('app.py imports OK')"
+      - name: Smoke-test config endpoint
+        run: |
+          export CIIQ_WATSONX_API_KEY=test-key-placeholder
+          export CIIQ_WATSONX_PROJECT_ID=test-proj-placeholder
+          export CIIQ_SECRET_KEY=test-secret
+          python - <<'PYEOF'
+          import app, json
+          client = app.app.test_client()
+          app.app.config["TESTING"] = True
+          resp = client.get("/api/config")
+          assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
+          data = json.loads(resp.data)
+          assert data["ok"] is True
+          assert "watsonx" in data
+          assert "projects" in data
+          print("GET /api/config  →  OK")
+          resp2 = client.get("/api/runs")
+          assert resp2.status_code == 200
+          print("GET /api/runs    →  OK")
+          PYEOF
