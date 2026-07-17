@@ -17,7 +17,7 @@ watsonx:
   fallback_model: "ibm/granite-3-8b-instruct"
 
   max_tokens:       1200
-  max_agent_turns:  8      # max ReAct iterations per analysis
+  max_agent_turns:  16      # max ReAct iterations per analysis
   call_stagger_ms:  300    # delay between KVM/QEMU/libvirt calls
 
 ci:

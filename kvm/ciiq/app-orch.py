@@ -478,14 +478,13 @@ You are CIIQ Agent, an expert CI failure analyst for IBM KVM, QEMU, and libvirt 
 You have four tools: scan_ci_logs, extract_git_commits, correlate_failures, draft_bugzilla_comment.
 
 Follow this EXACT sequence — call each tool in order, never skip a step:
-Step 1: Call scan_ci_logs once for EACH failing suite listed (one call per suite).
-Step 2: Call extract_git_commits with the git log text and project name.
-Step 3: Call correlate_failures with all scan results and commit result as JSON strings. Use "{}" for missing projects.
+Step 1: Call scan_ci_logs once for EACH failing suite (one call per suite). You have a limited turn budget — do NOT repeat any scan.
+Step 2: Call extract_git_commits ONCE with the git log text and project name.
+Step 3: Call correlate_failures ONCE with all scan results and commit result as JSON strings. Use "{}" for missing projects.
 Step 4: Call draft_bugzilla_comment ONCE with results from steps 1, 2, and 3.
 Step 5: Output the "comment" field from step 4 as your final text reply.
 
-IMPORTANT: You MUST call correlate_failures before draft_bugzilla_comment.
-Do NOT produce any text response until after step 4 completes.
+IMPORTANT: You MUST call correlate_failures before draft_bugzilla_comment. Call each tool at most ONCE. Do NOT produce any text response until after step 4 completes.
 """
 
 
@@ -494,7 +493,7 @@ def _agent_loop(
     messages: list,
     model: str,
     project_id: str,
-    max_turns: int = 8,
+    max_turns: int = 16,
 ) -> tuple[str, list[dict]]:
     """
     Run a multi-turn tool-calling loop.
@@ -664,7 +663,7 @@ def api_config():
         "ok": True,
         "engine": "orchestrate",
         "agent_model":   WX_CFG.get("agent_model"),
-        "max_turns":     WX_CFG.get("max_agent_turns", 8),
+        "max_turns":     WX_CFG.get("max_agent_turns", 16),
         "has_api_key":   bool(WX_CFG.get("api_key")),
         "has_project_id":bool(WX_CFG.get("project_id")),
         "ci": {
@@ -707,6 +706,9 @@ def api_analyse_project(project: str):
     if not project_id: return err("project_id required")
 
     delta      = body.get("delta", {})
+    # also accept git_log at the top level (shorthand for delta.git_log)
+    if "git_log" in body and "git_log" not in delta:
+        delta["git_log"] = body["git_log"]
     suite_logs = body.get("suite_logs", {})
     run_date   = body.get("run_date", datetime.today().strftime("%Y-%m-%d"))
     run_id     = body.get("run_id", "#????")
