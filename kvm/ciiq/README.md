@@ -122,6 +122,44 @@ New CI mail arrives
 
 ---
 
+## Button reference
+
+| Button | Function | Needs server | Needs credentials | Populates Correlate |
+|--------|----------|:---:|:---:|:---:|
+| **⚡ Analyse Offline** | Parses mail in browser → §0–§7 HTML report | ✗ | ✗ | ✗ |
+| **⚙ Local Analysis** | Server-side heuristic engine → 3 project Markdown reports | ✓ | ✗ | ✓ |
+| **⚡ Analyse All Projects** | WatsonX (or local fallback) → 3 project Markdown reports | ✓ | Optional | ✓ |
+| **🔗 Correlate** | Cross-project root cause, minimum fix set, triage order, reproducer | ✓ | Optional | — |
+| **⬇ Export Report** | Generates downloadable self-contained HTML report | ✓ | ✗ | — |
+
+### ⚡ Analyse Offline
+Runs entirely in the browser — no server, no network, no credentials. Parses
+the pasted CI mail with `parseMail()`, classifies failures with
+`classifyFailures()`, then renders `renderReport()` inline. Also populates all
+suite log textareas, PASS/FAIL badges, run bar fields, and the kernel key env
+tab as a side-effect.
+
+### ⚙ Local Analysis
+Always calls `/api/analyse/local` (hardcoded — no credential check). Collects
+suite log textareas + PASS/FAIL badges + git delta, sends to the Python
+heuristic engine, renders per-project Markdown in the KVM / QEMU / libvirt
+tabs. Saves results into `analysisCache` to enable Correlate.
+
+### ⚡ Analyse All Projects
+Checks for WatsonX credentials first. With credentials → `/api/analyse/all`
+(LLM path). Without → `/api/analyse/local` (same as Local Analysis). On HTTP
+429 rate-limit, automatically retries the full batch against the local engine.
+
+### 🔗 Correlate
+Requires `analysisCache` to be non-empty (run Local Analysis or Analyse All
+first). Sends the three per-project analysis texts + git delta to
+`/api/correlate`. Produces a 5-section cross-project report: shared root cause,
+dependency cascade (kernel → QEMU → libvirt), minimum revert set (ordered `git
+revert` commands), triage order (which suite to run first), and shortest
+tuxmaker reproducer.
+
+---
+
 ## Off-VPN / offline operation
 
 Tuxmaker SSH (`tuxmaker.boeblingen.de.ibm.com:22`) is only reachable on VPN.
@@ -164,10 +202,6 @@ The CI mail uses a compact annotation prefix on each failure line:
 | `k` | kernel-mm-kasan |
 | `N` | kernel-next |
 
-CIIQ strips these prefixes before log scanning (so error patterns fire
-correctly) and re-parses them in the HTML report renderer to produce
-per-row age-based verdicts:
-
 ### Age-based verdicts
 
 | Age | Verdict | Meaning |
@@ -178,7 +212,7 @@ per-row age-based verdicts:
 | 4–29d | **Recent — check delta** | May be in scope of the current change |
 | 30–89d | **Likely pre-existing** | Verify before reverting |
 | ≥ 90d | **Pre-existing — do not revert** | Long-standing flap unrelated to current delta |
-| "ci-error:" | **Infrastructure failure** or **Infra — long-standing** | Not a code issue |
+| `ci-error:` | **Infrastructure failure** or **Infra — long-standing** | Not a code issue |
 
 ---
 
@@ -203,6 +237,54 @@ access. Paste the CI mail → click **⚡ Analyse Offline** → report appears.
 
 ---
 
+## Local analysis engine (`app.py`)
+
+Pure-Python heuristic engine — no LLM, no network. `analyse_project()` produces
+a 6-section Markdown report per project:
+
+1. **Introducing Commit(s)** — git log parse + diff --stat
+2. **Root Cause** — top-5 error signatures, representative lines, s390x context
+3. **Affected Subsystems** — from log keyword matching
+4. **Why this project is affected** — migration / KVM / ABI reasoning
+5. **Recommended Fix** — `git revert <sha>` with commit subject
+6. **Verification Command** — `run-suite.sh <suite> HEAD` on tuxmaker
+
+### Error patterns (26 total)
+
+**Kernel crashes:** `BUG:` · `Kernel panic` · `Oops` · `GPF` · `segfault` ·
+`NULL pointer dereference` · `use-after-free` · `stack overflow` · `deadlock` ·
+`WARN_ON` / `WARNING:`
+
+**Test / process errors:** `TIMEOUT` / `timeout` · `FAIL` / `FAILED` · `ERROR:` · `Aborted` ·
+`AssertionError` · `No such device` · `Permission denied` · `Invalid argument` ·
+`OOM` · `migration failed`
+
+**CI TAP infrastructure:** `ci-error: test suite script failure` · `ci-error: invalid tap` ·
+`ci-error: ssh connection error` · `ci-error: test suite timeout` ·
+`ci-error: install test suite packages` · `timeout; duration=<N>`
+
+### Subsystems (10)
+
+`KVM core` · `s390x arch` · `memory mgmt` · `VFIO` · `virtio` ·
+`live migration` · `CPU model` · `QMP/monitor` · `libvirt driver` · `QEMU block`
+
+---
+
+## 🔗 Correlate engine
+
+After per-project analysis populates `analysisCache`, Correlate produces a
+5-section cross-project report:
+
+| § | Title | Content |
+|---|-------|---------|
+| 1 | Cross-Project Correlation | Common commits across all three projects as shared suspects |
+| 2 | Dependency Chain | s390x stack cascade: kernel ABI → QEMU KVM_SET/GET_ONE_REG → libvirt QMP |
+| 3 | Minimum Fix Set | Numbered `git revert` commands in reverse-chronological order (up to 3) |
+| 4 | Triage Order | KVM selftests → QEMU s390x-kvm → libvirt-s390x (fastest to slowest to confirm) |
+| 5 | Reproducer | Shortest tuxmaker command sequence to reproduce without full CI |
+
+---
+
 ## Python backend functions (`app.py`)
 
 ### Bootstrap / config
@@ -221,8 +303,8 @@ access. Paste the CI mail → click **⚡ Analyse Offline** → report appears.
 | `_strip_tap_annotations` | `(text: str) → str` | Remove `[ABCD][Nx Nd]` prefixes from log lines before pattern matching |
 | `_scan_log` | `(text: str) → dict` | Scan a log snippet; return `{hits, signatures, top_errors, raw_lines}` |
 | `_extract_commits` | `(git_log: str) → list[dict]` | Parse `git log --oneline` into `[{sha, subject}]` |
-| `analyse_project` | `(project, delta, suite_logs, run_date, run_id, suite_status=None) → str` | Run the 6-section local heuristic analysis for one project (kvm/qemu/libvirt). Returns Markdown. |
-| `correlate_projects` | `(delta, analyses, run_date, run_id) → str` | Merge per-project analyses into a cross-project dependency chain, minimum fix set, and triage order. Returns Markdown. |
+| `analyse_project` | `(project, delta, suite_logs, run_date, run_id, suite_status=None) → str` | Run the 6-section local heuristic analysis for one project. Returns Markdown. |
+| `correlate_projects` | `(delta, analyses, run_date, run_id) → str` | Merge per-project analyses into cross-project dependency chain, minimum fix set, and triage order. Returns Markdown. |
 | `_add_history` | `(project, status, summary) → None` | Append an analysis result to the Flask session history list |
 
 ### CI mail parser
@@ -240,37 +322,25 @@ Compiled regexes used by `_parse_ci_mail`:
 | `_INGEST_RUNID_RE` | `/ci-run/(\d+)` | Run ID from URL |
 | `_INGEST_LOGPATH_RE` | `Full log:\s*(\S+)` | Log directory path |
 | `_INGEST_KERNEL_RE` | `^([A-Za-z]):\s+kernel-(\S+)\s+\(([^)]+)\)` | Kernel key legend entries |
-| `_INGEST_SECTION_RE` | `^Test failures for test suite '([^']+)'…` | Per-suite failure sections (multiline, preserves annotations) |
-
-### HTML report renderer
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `_h` | `(s: str) → str` | HTML-escape a string |
-| `_code` | `(s: str) → str` | Wrap string in `<code>` |
-| `_pre` | `(s: str) → str` | Wrap string in `<pre>` |
-| `_section` | `(num: int, title: str) → str` | Render a numbered section heading |
-| `_parse_annotation` | `(line: str) → tuple[str, int, int, str]` | Parse a TAP annotation line into `(kernels, count, age_days, text)` |
-| `_ann_html` | `(kernels, count, age) → str` | Render an annotation row as an HTML `<tr>` with verdict pill |
-| `_render_html_report` | `(parsed, delta, analyses, run_date, run_id, suite_logs=None, suite_status=None) → str` | Render the full self-contained HTML report (7 sections, inline CSS, no external assets) |
+| `_INGEST_SECTION_RE` | `^Test failures for test suite '([^']+)'…` | Per-suite failure sections |
 
 ### Flask endpoints
 
-| Method | Route | Handler | Purpose |
-|--------|-------|---------|---------|
-| `GET` | `/` | `index` | Serve `ciiq.html` via Jinja2 (injects run_date, run_id, web_url from config) |
-| `GET` | `/api/config` | `api_config` | Return sanitised config (suites, model, run defaults — no secrets) |
-| `POST` | `/api/analyse/<project>` | `api_analyse_project` | Analyse one project (`kvm`/`qemu`/`libvirt`) |
-| `POST` | `/api/analyse/all` | `api_analyse_all` | Analyse all three projects in parallel |
-| `POST` | `/api/analyse/local` | `api_analyse_local` | Alias for `all` — used by the "⚙ Local Analysis" button |
-| `POST` | `/api/correlate` | `api_correlate` | Cross-project correlation and minimum fix set |
-| `GET` | `/api/runs` | `api_runs` | List available CI run dates from the tuxmaker log directory |
-| `GET` | `/api/run/<date>/suites` | `api_run_suites` | Return suite names and log snippets for a specific run date |
-| `GET` | `/api/delta/<date>` | `api_delta` | Return cached or live-fetched git delta for a run date |
-| `POST` | `/api/ingest` | `api_ingest` | Parse a raw CI mail → structured JSON for the UI |
-| `POST` | `/api/report` | `api_report` | Generate and return the downloadable HTML report |
-| `GET` | `/api/history` | `api_history` | Return session analysis history |
-| `DELETE` | `/api/history` | `api_clear_history` | Clear session analysis history |
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `GET` | `/` | Serve `ciiq.html` via Jinja2 (injects run_date, run_id, web_url from config) |
+| `GET` | `/api/config` | Return sanitised config (suites, model, run defaults — no secrets) |
+| `POST` | `/api/analyse/<project>` | Analyse one project (`kvm`/`qemu`/`libvirt`) |
+| `POST` | `/api/analyse/all` | Analyse all three projects in parallel |
+| `POST` | `/api/analyse/local` | Alias for `all` — used by the "⚙ Local Analysis" button |
+| `POST` | `/api/correlate` | Cross-project correlation and minimum fix set |
+| `GET` | `/api/runs` | List available CI run dates from the tuxmaker log directory |
+| `GET` | `/api/run/<date>/suites` | Return suite names and log snippets for a specific run date |
+| `GET` | `/api/delta/<date>` | Return cached or live-fetched git delta for a run date |
+| `POST` | `/api/ingest` | Parse a raw CI mail → structured JSON for the UI |
+| `POST` | `/api/report` | Generate and return the downloadable HTML report |
+| `GET` | `/api/history` | Return session analysis history |
+| `DELETE` | `/api/history` | Clear session analysis history |
 
 ### SSH helpers (tuxmaker)
 
@@ -283,77 +353,46 @@ Compiled regexes used by `_parse_ci_mail`:
 
 ## JavaScript functions (`templates/ciiq.html`)
 
-All JS lives in a single inline `<script>` block. The offline engine runs
-inside an IIFE that exposes nothing to the global scope intentionally; it
-accesses the DOM through closures.
-
 ### UI helpers
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `wxConfig` | `() → dict` | Build the WatsonX credential object from sidebar fields or `window.serverCreds` |
-| `runInfo` | `() → dict` | Collect run metadata (date, id, url) from the run bar fields |
-| `delta` | `() → dict` | Collect git delta tabs (sha_good, sha_bad, git_log, diff_stat, patch, env) |
-| `collectLogs` | `(proj: string) → dict` | Collect suite log textarea values for one project into `{suite: text}` |
-| `collectSuiteStatus` | `() → dict` | Read all PASS/FAIL badges from the suite table into `{suite: "PASS"|"FAIL"}` |
-| `setBody` | `(id, html, cls) → void` | Set inner HTML + CSS class of an analysis result panel |
-| `setCorr` | `(html, cls) → void` | Set the Correlate panel HTML + CSS class |
-| `showTok` | `(pre, model, inT, outT) → void` | Show token-count badge (model, input tokens, output tokens) |
-| `spin` | `(label) → string` | Return an animated spinner HTML string |
-| `setConnDot` | `(state) → void` | Update the WatsonX connection indicator dot (`ok`/`err`/`''`) |
-| `setStatus` | `(id, type, msg) → void` | Set status bar text with `ok`/`err`/`info` styling |
-| `h` | `(s) → string` | HTML-escape a string (client-side) |
-| `fmt` | `(raw) → string` | Convert Markdown to HTML (headers, bold, code, lists, horizontal rules) |
-| `syncRunBar` | `() → void` | Keep run-date, run-id, and run-url fields mutually consistent; update the run topbar |
-
-### API calls
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `apiPost` | `(path, body) → Promise` | `fetch` wrapper: POST JSON, parse response, throw on `!r.ok` |
-| `testConnection` | `() → void` | Test WatsonX credentials by calling `/api/config` |
+| Function | Purpose |
+|----------|---------|
+| `wxConfig()` | Build the WatsonX credential object from sidebar fields or `window.serverCreds` |
+| `runInfo()` | Collect run metadata (date, id, url) from the run bar fields |
+| `delta()` | Collect git delta tabs (sha_good, sha_bad, git_log, diff_stat, patch, env) |
+| `collectLogs(proj)` | Collect suite log textarea values for one project into `{suite: text}` |
+| `collectSuiteStatus()` | Read all PASS/FAIL badges from the suite table into `{suite: "PASS"\|"FAIL"}` |
+| `setBody(id, html, cls)` | Set inner HTML + CSS class of an analysis result panel |
+| `setCorr(html, cls)` | Set the Correlate panel HTML + CSS class |
+| `showTok(pre, model, inT, outT)` | Show token-count badge (model, input tokens, output tokens) |
+| `spin(label)` | Return an animated spinner HTML string |
+| `setConnDot(state)` | Update the WatsonX connection indicator dot (`ok`/`err`/`''`) |
+| `setStatus(id, type, msg)` | Set status bar text with `ok`/`err`/`info` styling |
+| `h(s)` | HTML-escape a string (client-side) |
+| `fmt(raw)` | Convert Markdown to HTML (headers, bold, code, lists, horizontal rules) |
+| `syncRunBar()` | Keep run-date, run-id, and run-url fields mutually consistent |
 
 ### Analysis flow
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `analyse` | `(proj: string) → void` | Run analysis for one project; shows spinner, posts to `/api/analyse/<proj>`, renders result |
-| `analyseAll` | `() → void` | Run WatsonX analysis for all three projects sequentially |
-| `analyseLocal` | `() → void` | Run the local heuristic engine (`/api/analyse/local`) for all projects; no WatsonX required |
-| `correlate` | `() → void` | Post cached per-project analyses to `/api/correlate`; render the cross-project report |
-| `_showCorrResult` | `(r, modelLabel) → void` | Render a correlation result into the Correlate panel |
-| `loadRunLogs` | `() → void` | Fetch suite logs for the current run date from tuxmaker via `/api/run/<date>/suites` |
-| `exportReport` | `() → void` | Collect all fields and POST to `/api/report`; trigger browser download of the HTML report |
+| Function | Purpose |
+|----------|---------|
+| `analyseAll()` | Check credentials → POST to `/api/analyse/all` or `/api/analyse/local`; 429 auto-fallback |
+| `analyseLocal()` | Always POST to `/api/analyse/local`; guards empty logs |
+| `correlate()` | POST `analysisCache` to `/api/correlate`; 429 auto-fallback to `/api/correlate/local` |
+| `exportReport()` | Collect all fields and POST to `/api/report`; trigger browser download |
+| `analyseOffline()` | Browser-only: call `parseMail` → `classifyFailures` → `renderReport`; populate UI |
 
-### Session / history
+### ⚡ Offline engine (IIFE)
 
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `refreshHistory` | `() → void` | Fetch and render the session analysis history from `/api/history` |
-| `loadExample` | `() → void` | Seed all input fields with run-1592 example data (git log, diff stat, suite logs) |
+| Function | Purpose |
+|----------|---------|
+| `parseMail(raw)` | Parse complete CI daily mail → `ParsedMail` object |
+| `classifyFailures(parsed)` | Classify all annotated failure lines into 5 buckets |
+| `renderReport(parsed, mailText)` | Render full §0–§7 HTML report as string |
+| `analyseOffline()` | Orchestrates: parse → classify → render → populate UI |
+| `offlinePrintReport()` | Open new window with report + print CSS; trigger print dialog |
 
-### CI mail import
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `ingestMail` | `() → void` | POST the pasted mail text to `/api/ingest`; populate run metadata, suite log textareas, PASS/FAIL badges, kernel key env tab, and fail counter from the response |
-
-### ⚡ Offline engine (IIFE — `ciiq.html` lines 1486–2237)
-
-These functions run entirely in the browser with no server calls.
-
-#### Parser
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `esc` | `(s) → string` | HTML-escape for safe insertion into rendered report |
-| `code` | `(s) → string` | Wrap in `<code>…</code>` |
-| `age_pill` | `(d: number) → string` | Render an age badge: `0d NEW` (red), `6d` (amber), `96d` (grey) |
-| `verdict` | `(age, kernelStr, text) → string` | Return coloured verdict HTML for a failure row based on age and kernel spread |
-| `parseAnn` | `(line: string) → object\|null` | Parse one TAP annotation line `[EDGK][Nx Nd] test.name` → `{kernels, count, age, text}` or `null` |
-| `parseMail` | `(raw: string) → ParsedMail` | Parse a complete CI daily mail into a structured object — see **ParsedMail schema** below |
-
-**ParsedMail schema** (returned by `parseMail`):
+**ParsedMail schema:**
 
 ```js
 {
@@ -371,69 +410,15 @@ These functions run entirely in the browser with no server calls.
 }
 ```
 
-`parseMail` parsing steps:
+**`classifyFailures` buckets:**
 
-1. **Metadata** — `Daily run:`, `Web UI:`, `Full log:` headers
-2. **Kernel key** — `E: kernel-debug (…)` legend lines
-3. **Combined table** — `SUITE RUNS TESTS PASS FAIL …` rows → `suite_status` + `combined_stats`  
-   *Note: suite names may contain uppercase (e.g. `hades-withHW`) — regex uses `[a-zA-Z0-9._-]`*
-4. **Suite failure sections** — `Test failures for test suite 'X'` blocks with raw annotated lines
-5. **Dumps** — `Dumps of unresponsive systems` table
-6. **Fixed tests** — `Fixed test cases` table; continuation lines (test names that wrap across two rows) are spliced back into the test-name column before the RUNS token, not appended at the end of the row
-7. **Test systems** — `Test systems` table with multi-word runtime (`3h 24m 50s`) and dead-node runtime (`-`)
-
-#### Rule engine
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `classifyFailures` | `(parsed: ParsedMail) → Classification` | Classify all annotated failure lines into five buckets |
-
-**Classification schema**:
-
-```js
-{
-  code_regressions: [{ suite, text, age, kernels, count }],  // all-kernel, ≤14d
-  node_faults:      [{ suite, count }],                       // all-kernel clusters
-  infra_issues:     [{ suite, text, age }],                   // ci-error:* lines
-  new_today:        [{ suite, text, count }],                 // age === 0
-  pre_existing:     [{ suite, text, age }]                    // age ≥ 90
-}
-```
-
-Rules applied by `classifyFailures`:
-
-- A failure spanning **all kernel flavours** present in the mail in **≤14d** → `code_regressions`
-- A suite with ≥6 all-kernel failures → `node_faults` (hardware/hypervisor suspect)
-- Lines matching `ci-error:` → `infra_issues`
-- `age === 0` → `new_today`
-- `age >= 90` → `pre_existing`
-
-#### Renderer
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `renderReport` | `(parsed: ParsedMail, mailText: string) → string` | Render the full §0–§7 offline HTML report as a string; returned HTML is set as `offline-out` innerHTML |
-
-`renderReport` section breakdown:
-
-| Call | Section | Data source |
-|------|---------|-------------|
-| `section(0, 'Run Summary')` | Suite table (suite/status/runs/fail/first-failure-line) + kernel key pills | `parsed.combined_stats`, `parsed.suite_failures`, `parsed.kernel_key` |
-| `section(1, 'System Dumps')` | Crash dump table | `parsed.dumps` |
-| `section(2, 'Root Cause — Per Suite')` | Per-suite annotation tables with `age_pill` + `verdict` | `parsed.suite_failures` |
-| `section(3, 'Node Health & Infrastructure')` | Dead nodes (0/N suites), all-kernel clusters | `parsed.systems`, `cf.node_faults` |
-| `section(4, 'Failure Classification by Age')` | Category table with full test names (no truncation) | `cf.*` |
-| `section(5, 'Fixed Test Cases Since Last Run')` | Resolved-test cards with suite badge + last-failure date | `parsed.fixed` |
-| `section(6, 'Recommendations')` | Priority-ordered 🔴/🟡/🟢 action list | `dead`, `cf.*` |
-| `section(7, 'Alternate Fixes')` | Per introducing-commit: A revert / B forward-fix / C mitigation | `delta().git_log` |
-
-#### Controls
-
-| Function | Signature | Purpose |
-|----------|-----------|---------|
-| `analyseOffline` | `() → void` | Orchestrates the offline flow: call `parseMail`, populate UI fields (run bar, suite textareas, badges, kernel key env tab, fail counter), render report, update status bar |
-| `offlinePrintReport` | `() → void` | Open a new window with the rendered report + print-specific CSS, trigger browser print dialog (Save as PDF) |
-| `offlineToggleMinimise` | `(btn: HTMLElement) → void` | Toggle the report body between collapsed (topbar only) and expanded; updates button label `−`/`+` |
+| Bucket | Rule |
+|--------|------|
+| `code_regressions` | All kernel flavours present + age ≤ 14d |
+| `node_faults` | Suite has ≥ 6 all-kernel failures on same node |
+| `infra_issues` | Line contains `ci-error:` |
+| `new_today` | `age === 0` |
+| `pre_existing` | `age ≥ 90` |
 
 ---
 
@@ -470,68 +455,12 @@ Rules applied by `classifyFailures`:
 
 ---
 
-## Local analysis engine (`app.py`)
-
-Pure-Python heuristic engine — no LLM, no network. `analyse_project()` produces
-a 6-section Markdown report:
-
-1. **Introducing Commit(s)** — git log parse + diff --stat
-2. **Root Cause** — top-5 error signatures, representative lines, s390x context
-3. **Affected Subsystems** — from log keyword matching
-4. **Why this project is affected** — migration / KVM / ABI reasoning
-5. **Recommended Fix** — `git revert <sha>` with commit subject
-6. **Verification Command** — `run-suite.sh <suite> HEAD` on tuxmaker
-
-### Error patterns (26 total)
-
-Kernel: `BUG:` · `Kernel panic` · `Oops` · `GPF` · `segfault` ·
-`NULL pointer dereference` · `use-after-free` · `stack overflow` · `deadlock` ·
-`WARN_ON`/`WARNING:`
-
-Test/infra: `TIMEOUT`/`timeout` · `FAIL`/`FAILED` · `ERROR:` · `Aborted` ·
-`AssertionError` · `No such device` · `Permission denied` · `Invalid argument` ·
-`OOM` · `migration failed`
-
-CI TAP: `ci-error: test suite script failure` · `ci-error: invalid tap` ·
-`ci-error: ssh connection error` · `ci-error: test suite timeout` ·
-`ci-error: install test suite packages` · `timeout; duration=<N>`
-
-### Subsystems (10)
-
-`KVM core` · `s390x arch` · `memory mgmt` · `VFIO` · `virtio` ·
-`live migration` · `CPU model` · `QMP/monitor` · `libvirt driver` · `QEMU block`
-
----
-
-## HTML report export (`/api/report`)
-
-`POST /api/report` generates a fully self-contained HTML file. Sections:
-
-| # | Title |
-|---|-------|
-| 0 | Run summary table + kernel build legend |
-| 1 | System crashes & dump table |
-| 2 | Introducing commits (dark callout block with SHA range) |
-| 3 | Root cause per failing suite (annotation table with verdict column) |
-| 4 | Affected subsystems |
-| 5 | Minimum fix set (numbered `git revert` commands + combined block) |
-| 6 | Triage order |
-| 7 | Reproducer — shortest tuxmaker command sequence |
-
-The file is named `ciiq-run-<ID>-root-cause-report.html` and downloads
-immediately. No server needed to view it — share by email or drop into
-`.bob/artifacts/`.
-
----
-
 ## REST API reference
 
 All endpoints accept `Content-Type: application/json` and return JSON
 (except `/api/report` which returns `text/html`).
 
 ### `POST /api/ingest`
-
-Parse a raw CI daily mail and return structured data to populate the UI.
 
 ```json
 { "mail_text": "Daily run: 2026-08-16\nWeb UI: https://…/ci-run/1599\n…" }
@@ -544,61 +473,42 @@ Returns:
   "run_date": "2026-08-16",
   "run_id": "1599",
   "web_url": "https://…/ci-run/1599",
-  "log_path": "/home/ciuser/logs/daily/20260816/",
   "kernel_key": { "E": {"name":"debug","build":"7.2.0-…+debug"}, … },
-  "suite_logs": {
-    "hades": "[        N][  1x  16d] tests.test_se.BasicAPTestCase.runTest\n…",
-    "hades-withHW": "[ED GK  kN][  6x   6d] tests.test_vfio_pci_nvme…\n…"
-  },
+  "suite_logs": { "hades": "[N][1x 16d] tests.test_se…", … },
   "suite_status": { "hades": "FAIL", "s390-tools": "PASS", … },
-  "dumps": [{"suite":"ci-reipl","kernel":"mm","system":"b46lp60kvm01","dump_id":"D52247",…}]
+  "dumps": [{"suite":"ci-reipl","kernel":"mm","system":"b46lp60kvm01",…}]
 }
 ```
 
-`suite_logs` values retain the raw `[ABCD][Nx Nd]` annotation prefixes —
-the browser offline engine and the `_render_html_report` renderer both consume
-them directly.
-
-### `POST /api/analyse/local`  ·  `POST /api/analyse/all`
+### `POST /api/analyse/local`
 
 ```json
 {
   "run_date": "2026-08-16",
   "run_id":   "1599",
   "delta": {
-    "sha_good":      "a1b2c3d4",
-    "sha_bad":       "f7e8d9c0",
-    "git_log":       "f7e8d9c kvm/s390: add intercept for 0xb9af\n…",
+    "sha_good": "a1b2c3d4", "sha_bad": "f7e8d9c0",
+    "git_log":  "f7e8d9c kvm/s390: add intercept for 0xb9af\n…",
     "git_diff_stat": "arch/s390/kvm/intercept.c | 47 ++++++--\n…",
-    "git_patch":     "diff --git a/arch/s390/kvm/intercept.c\n+…",
-    "env_versions":  "# TODAY run #1599\ns390-tools-2.34.0\n…"
+    "git_patch":     "diff --git a/arch/s390/kvm/intercept.c\n…",
+    "env_versions":  "s390-tools-2.34.0\n…"
   },
-  "suite_logs": {
-    "kvm-unit-tests-kvm": "[E   K  kN][  9x  96d] firq-linear: timeout; duration=30",
-    "hades-withHW":       "[ED GK  kN][  6x   6d] tests.test_vfio_pci_nvme…"
-  },
-  "suite_status": {
-    "hades-monolithic": "PASS",
-    "s390-tools":       "PASS",
-    "kvm-unit-tests-tcg": "PASS"
-  }
+  "suite_logs": { "hades": "…", "kvm-unit-tests-kvm": "…" },
+  "suite_status": { "hades-monolithic": "PASS", "s390-tools": "PASS" }
 }
 ```
 
-Response:
+Returns:
 ```json
 {
   "ok": true,
   "results": {
-    "kvm": { "analysis": "## Run 2026-08-16  1599 — KVM Analysis\n…", "engine": "local" }
+    "kvm": { "analysis": "## Run 2026-08-16 …", "engine": "local" }
   },
   "errors": {},
   "engine": "local"
 }
 ```
-
-`suite_logs` can be flat (`{suite: text}`) or nested (`{project: {suite: text}}`).
-Flat is auto-split by matching suite names against `config.yaml`.
 
 ### `POST /api/correlate`
 
@@ -618,24 +528,23 @@ Same body shape as `/api/analyse/local`. Returns `text/html` with
 
 ---
 
-## Test suite
+## HTML report export (`/api/report`)
 
-```bash
-cd ~/kvm/ciiq              # or from the playground:
-node ciiq_test_runner.js   # 29 assertions against the real run-1599 CI mail
-```
+`POST /api/report` generates a fully self-contained HTML file:
 
-The test runner (`ciiq_test_runner.js` in the playground workspace) uses
-`vm.runInContext` to load the browser JS without a DOM and runs `parseMail`
-against the full run-1599 mail. It asserts:
+| # | Title |
+|---|-------|
+| 0 | Run summary table + kernel build legend |
+| 1 | System crashes & dump table |
+| 2 | Introducing commits (dark callout block with SHA range) |
+| 3 | Root cause per failing suite (annotation table with verdict column) |
+| 4 | Affected subsystems |
+| 5 | Minimum fix set (numbered `git revert` commands + combined block) |
+| 6 | Triage order |
+| 7 | Reproducer — shortest tuxmaker command sequence |
 
-- All metadata fields (run_date, run_id, log_path, 9 kernel letters)
-- 6 FAIL + 3 PASS suite status
-- Annotated line counts per suite (1/4/2/35/2/5)
-- All 3 crash dumps with correct suite/system/dump_id
-- All 5 fixed test names (including 4 two-line-wrapped entries)
-- 46 test systems, 3 dead nodes, `b46lp63` suites/model
-- 9 combined stats entries including `hades-withHW` (uppercase in suite name)
+The file is named `ciiq-run-<ID>-root-cause-report.html` and downloads
+immediately. No server needed to view it — share by email.
 
 ---
 
@@ -703,16 +612,14 @@ so the `suite_status` badge state is sent with the request.
 
 **`⚡ Analyse Offline` button does nothing / all buttons dead**  
 A JS syntax error in `ciiq.html` prevents the event listener block from running.
-Check the browser console. Run `node --check` on the extracted script block to
-find the error:
+Check the browser console. Run `node --check` on the extracted script block:
 ```bash
 node --check /tmp/ciiq_check.js  # extracted from templates/ciiq.html
 ```
 
 **`hades-withHW` missing from §0 Run Summary**  
-The combined stats regex requires lowercase-start suite names but `hades-withHW`
-contains uppercase `HW`. The regex is `[a-zA-Z0-9._-]+` — verify it hasn't
-been accidentally reverted to `[a-z0-9._-]+` in `parseMail` (ciiq.html line ~1551).
+The combined stats regex requires `[a-zA-Z0-9._-]+` — verify it hasn't been
+accidentally reverted to `[a-z0-9._-]+` in `parseMail` (ciiq.html line ~1551).
 
 **Missing Python module on startup**
 ```bash
