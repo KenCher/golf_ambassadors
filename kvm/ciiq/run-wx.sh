@@ -80,17 +80,19 @@ start_dev() {
   local port="${CIIQ_PORT:-5100}"
   lsof -ti:"${port}" | xargs kill -9 2>/dev/null || true
   source "${VENV}/bin/activate"
+  prefetch_latest_run
   info "Starting CIIQ development server..."
   info "  → http://localhost:5100"
   info "  Press Ctrl+C to stop."
   echo ""
   cd "${SCRIPT_DIR}"
-  FLASK_APP=app.py FLASK_ENV=development python app.py
+  FLASK_APP=app-wx.py FLASK_ENV=development CIIQ_CONFIG=config-wx.yaml python app-wx.py
 }
 
 # ── Start production server ───────────────────────────────────────────────────
 start_prod() {
   source "${VENV}/bin/activate"
+  prefetch_latest_run
   WORKERS="${CIIQ_WORKERS:-4}"
   PORT="${CIIQ_PORT:-5100}"
   info "Starting CIIQ production server (gunicorn)..."
@@ -108,7 +110,7 @@ start_prod() {
     --error-logfile "${LOG_FILE}" \
     --pid "${PID_FILE}" \
     --daemon \
-    "app:app"
+    "app-wx:app"
   success "CIIQ running at http://0.0.0.0:${PORT}  (PID: $(cat "${PID_FILE}"))"
   info "  To stop: ./run.sh stop"
   info "  Logs:    tail -f ${LOG_FILE}"
@@ -127,6 +129,15 @@ stop_prod() {
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
+prefetch_latest_run() {
+  source "${VENV}/bin/activate"
+  info "Checking for latest CI run on tuxmaker..."
+  CIIQ_CONFIG=config-wx.yaml python3 "${SCRIPT_DIR}/prefetch_delta.py" "${SCRIPT_DIR}" 2>&1 \
+    | while IFS= read -r line; do info "  ${line}"; done \
+    || warn "prefetch: could not reach tuxmaker -- run will use cached or manually loaded data"
+}
+
 CMD="${1:-}"
 check_python
 

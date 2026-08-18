@@ -12,9 +12,11 @@ ci:
   # tuxmaker SSH host (used by the extraction helper script)
   tuxmaker_host: "tuxmaker"
   # tuxmaker SSH user
-  tuxmaker_user: "ciuser"
+  tuxmaker_user: ""
   # Kernel git repo path on tuxmaker
   kernel_repo: "/home/ciuser/linux"
+  # Local directory for caching fetched git deltas (relative to ciiq dir)
+  delta_cache_dir: "delta_cache"
 
 projects:
   kvm:
@@ -22,11 +24,11 @@ projects:
       - { name: "canton-prototype",    category: "kernel",  default_status: "FAIL" }
       - { name: "ci-reipl",            category: "infra",   default_status: "FAIL" }
       - { name: "hades",               category: "kernel",  default_status: "FAIL" }
-      - { name: "hades-monolithic",    category: "kernel",  default_status: "FAIL" }
+      - { name: "hades-monolithic",    category: "kernel",  default_status: "PASS" }
       - { name: "hades-withHW",        category: "hw",      default_status: "FAIL" }
       - { name: "kvm-selftests",       category: "test",    default_status: "FAIL" }
       - { name: "kvm-unit-tests-kvm",  category: "test",    default_status: "FAIL" }
-      - { name: "s390-tools",          category: "config",  default_status: "FAIL" }
+      - { name: "s390-tools",          category: "config",  default_status: "PASS" }
   qemu:
     suites:
       - { name: "qemu-s390x-kvm",      category: "kernel",  default_status: "FAIL" }

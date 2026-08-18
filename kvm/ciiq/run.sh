@@ -54,6 +54,7 @@ start_dev() {
   local port="${CIIQ_PORT:-5100}"
   lsof -ti:"${port}" | xargs kill -9 2>/dev/null || true
   source "${VENV}/bin/activate"
+  prefetch_latest_run
   info "Starting CIIQ development server (local engine)..."
   info "  → http://localhost:${port}"
   info "  Press Ctrl+C to stop."
@@ -64,6 +65,7 @@ start_dev() {
 
 start_prod() {
   source "${VENV}/bin/activate"
+  prefetch_latest_run
   WORKERS="${CIIQ_WORKERS:-4}"
   PORT="${CIIQ_PORT:-5100}"
   info "Starting CIIQ production server (gunicorn, local engine)..."
@@ -94,6 +96,17 @@ stop_prod() {
   else
     warn "No PID file found — CIIQ may not be running."
   fi
+}
+
+
+prefetch_latest_run() {
+  # SSH to tuxmaker, find the latest run date, fetch its git delta into local cache.
+  # Non-fatal: any failure is logged as a warning and startup continues.
+  source "${VENV}/bin/activate"
+  info "Checking for latest CI run on tuxmaker..."
+  python3 "${SCRIPT_DIR}/prefetch_delta.py" "${SCRIPT_DIR}" 2>&1 | while IFS= read -r line; do
+    info "  ${line}"
+  done || warn "prefetch: could not reach tuxmaker — start the app and use Load Run Logs to fetch manually"
 }
 
 CMD="${1:-}"

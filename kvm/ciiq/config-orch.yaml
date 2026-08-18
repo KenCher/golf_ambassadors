@@ -7,14 +7,14 @@
 watsonx:
   api_key:    "${CIIQ_WATSONX_API_KEY}"
   project_id: "${CIIQ_WATSONX_PROJECT_ID}"
-  region:     "us-south"
+  region:     "${CIIQ_WATSONX_REGION}"
 
   # Agentic model — must support OpenAI-compatible tool calling
   # llama-3-3-70b-instruct confirmed working on this project
   agent_model: "meta-llama/llama-3-3-70b-instruct"
 
   # Fallback for single-prompt analysis (no tool calling needed)
-  fallback_model: "ibm/granite-3-8b-instruct"
+  fallback_model: "meta-llama/llama-3-3-70b-instruct"
 
   max_tokens:       1200
   max_agent_turns:  16      # max ReAct iterations per analysis
@@ -26,6 +26,8 @@ ci:
   tuxmaker_host:  "tuxmaker"
   tuxmaker_user:  "ciuser"
   kernel_repo:    "/home/ciuser/linux"
+  latest_run_date: "${CIIQ_LATEST_RUN_DATE}"
+  latest_run_id:   "${CIIQ_LATEST_RUN_ID}"
 
 projects:
   kvm:

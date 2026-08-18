@@ -1,7 +1,8 @@
 #!/opt/homebrew/bin/python3
 """
 Monday.com Weekly Column Agent
-Automatically adds a new "Updates MM/DD" text column to the board every Monday.
+Automatically adds a new "Updates MM/DD" text column to the board every Monday,
+inserted immediately after the most recent previous "Updates MM/DD" column.
 Safe to run multiple times — skips creation if today's column already exists.
 
 Usage:
@@ -50,7 +51,7 @@ def gql(query: str, variables=None) -> dict:
 
 
 def get_existing_columns() -> list[dict]:
-    """Return all columns on the board."""
+    """Return all columns on the board in their current display order."""
     query = f"""
     query {{
         boards(ids: {BOARD_ID}) {{
@@ -71,26 +72,61 @@ def column_exists(columns: list[dict], title: str) -> bool:
     return any(col["title"] == title for col in columns)
 
 
-def create_text_column(title) -> dict:
-    """Create a new long-text column with the given title. Returns the new column."""
-    mutation = """
-    mutation ($boardId: ID!, $title: String!, $columnType: ColumnType!) {
-        create_column(
-            board_id:    $boardId,
-            title:       $title,
-            column_type: $columnType
-        ) {
-            id
-            title
-            type
-        }
-    }
+def find_previous_updates_column(columns: list[dict]) -> dict | None:
     """
-    variables = {
-        "boardId":    BOARD_ID,
-        "title":      title,
-        "columnType": "long_text",
-    }
+    Return the last column whose title starts with 'Updates ' (case-sensitive).
+    Columns are returned by Monday in display order, so the last match is the
+    most recently added Updates column.
+    """
+    updates_cols = [col for col in columns if col["title"].startswith(f"{COLUMN_TITLE_PREFIX} ")]
+    return updates_cols[-1] if updates_cols else None
+
+
+def create_text_column(title: str, after_column_id: str | None = None) -> dict:
+    """
+    Create a new text column with the given title, optionally positioned
+    immediately after `after_column_id` on the board.
+    """
+    if after_column_id:
+        mutation = """
+        mutation ($boardId: ID!, $title: String!, $columnType: ColumnType!, $afterColumnId: ID!) {
+            create_column(
+                board_id:        $boardId,
+                title:           $title,
+                column_type:     $columnType,
+                after_column_id: $afterColumnId
+            ) {
+                id
+                title
+                type
+            }
+        }
+        """
+        variables = {
+            "boardId":       BOARD_ID,
+            "title":         title,
+            "columnType":    "text",
+            "afterColumnId": after_column_id,
+        }
+    else:
+        mutation = """
+        mutation ($boardId: ID!, $title: String!, $columnType: ColumnType!) {
+            create_column(
+                board_id:    $boardId,
+                title:       $title,
+                column_type: $columnType
+            ) {
+                id
+                title
+                type
+            }
+        }
+        """
+        variables = {
+            "boardId":    BOARD_ID,
+            "title":      title,
+            "columnType": "text",
+        }
     data = gql(mutation, variables)
     return data["create_column"]
 
@@ -161,15 +197,25 @@ def main():
         print(f"\n✅  Column '{column_title}' already exists — nothing to do.")
         return
 
-    # Create the column
+    # Find the previous Updates column to position after
+    prev_col = find_previous_updates_column(columns)
+    if prev_col:
+        print(f"\n📌  Will insert after previous column: '{prev_col['title']}' (id: {prev_col['id']})")
+    else:
+        print("\n📌  No previous 'Updates' column found — new column will be appended at end.")
+
+    # Create the column, positioned right after the previous Updates column
+    after_id = prev_col["id"] if prev_col else None
     print(f"\n➕  Creating column '{column_title}'...")
     if args.dry_run:
-        print(f"    [DRY RUN] Would create long_text column: '{column_title}'")
+        print(f"    [DRY RUN] Would create text column: '{column_title}'")
+        if prev_col:
+            print(f"    [DRY RUN] Would place it after '{prev_col['title']}' (id: {after_id})")
         print("\n✅  Dry run complete.")
         return
 
     try:
-        new_col = create_text_column(column_title)
+        new_col = create_text_column(column_title, after_column_id=after_id)
     except Exception as e:
         print(f"\n❌  Failed to create column: {e}")
         sys.exit(1)
@@ -178,6 +224,9 @@ def main():
     print(f"    ID    : {new_col['id']}")
     print(f"    Title : {new_col['title']}")
     print(f"    Type  : {new_col['type']}")
+    if prev_col:
+        print(f"    Placed after: '{prev_col['title']}'")
+
     print()
     print("Done! The new column is now visible on your Monday.com board.")
     print("Team members can fill in their updates for the week.")

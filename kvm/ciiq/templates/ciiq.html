@@ -100,10 +100,13 @@ tr:nth-child(even) td{background:#fafafa}
 .result-box{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:14px}
 .result-head{background:#f7f8fa;padding:9px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px}
 .result-head h4{font-size:13px;font-weight:700;margin:0;flex:1}
-.result-body{padding:12px 14px;font-size:13px;line-height:1.75;min-height:52px}
+.result-body{padding:12px 14px;font-size:13px;line-height:1.75;min-height:52px;background:#fff;color:#1f2328}
 .result-body.empty{color:#57606a;font-style:italic}
-.result-body pre{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:4px;padding:9px 10px;font-size:11.5px;overflow-x:auto;margin:6px 0;font-family:"SFMono-Regular",Consolas,monospace;line-height:1.5}
-.result-body code{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:3px;padding:0 4px;font-size:11.5px;font-family:"SFMono-Regular",Consolas,monospace}
+/* pre/code — dark terminal style so they're visible against white result body */
+.result-body pre{background:#161b22;border:1px solid #30363d;border-radius:4px;padding:9px 10px;font-size:11.5px;overflow-x:auto;margin:6px 0;font-family:"SFMono-Regular",Consolas,monospace;line-height:1.5;color:#e6edf3}
+.result-body code{background:#161b22;border:1px solid #30363d;border-radius:3px;padding:1px 5px;font-size:11.5px;font-family:"SFMono-Regular",Consolas,monospace;color:#79c0ff}
+/* blockquote sample lines — rendered as > `...` */
+.result-body blockquote{border-left:3px solid #3b82d4;margin:4px 0 4px 4px;padding:3px 10px;background:#f0f6ff;border-radius:0 4px 4px 0;font-size:12px;color:#1f2328}
 .callout-rc  {background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin:8px 0}
 .callout-rc strong{color:#92400e}
 .callout-fix {background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:10px 12px;margin:8px 0}
@@ -111,6 +114,8 @@ tr:nth-child(even) td{background:#fafafa}
 .callout-corr{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;margin:8px 0}
 .callout-corr strong{color:#1e40af}
 .callout-commit{background:#0d1117;border-radius:6px;padding:10px 12px;margin:8px 0;font-family:"SFMono-Regular",Consolas,monospace;font-size:11.5px;color:#e6edf3}
+/* inside dark callout-commit, inline code should not re-apply light bg */
+.callout-commit code{background:transparent;border:none;color:#79c0ff;padding:0}
 
 /* ── Token bar ── */
 .tok-bar{font-size:11px;color:#57606a;padding:5px 14px;border-top:1px solid #e5e7eb;background:#fafafa;display:flex;gap:14px;flex-wrap:wrap}
@@ -147,6 +152,11 @@ tr:nth-child(even) td{background:#fafafa}
 .code-area::placeholder{color:#484f58}
 .git-cmd{font-size:10px;color:#8b949e;margin-bottom:5px;font-family:"SFMono-Regular",Consolas,monospace}
 .git-cmd code{color:#58a6ff;background:transparent;border:none;font-size:10px}
+/* text selection in dark areas */
+.callout-commit ::selection,.callout-commit::selection{background:#264f78;color:#e6edf3}
+.git-body ::selection,.git-body::selection{background:#264f78;color:#e6edf3}
+.code-area::selection{background:#264f78;color:#e6edf3}
+.sha-box input::selection{background:#264f78;color:#e6edf3}
 </style>
 </head>
 <body>
@@ -186,11 +196,23 @@ tr:nth-child(even) td{background:#fafafa}
   </div>
   <label>Model</label>
   <select id="wx-model">
-    <option value="ibm/granite-3-8b-instruct" selected>granite-3-8b-instruct</option>
-    <option value="ibm/granite-13b-chat-v2">granite-13b-chat-v2</option>
-    <option value="ibm/granite-34b-code-instruct">granite-34b-code-instruct</option>
-    <option value="meta-llama/llama-3-3-70b-instruct">llama-3-3-70b-instruct</option>
-    <option value="mistralai/mistral-large">mistral-large</option>
+    <optgroup label="— Llama (confirmed active) —">
+      <option value="meta-llama/llama-3-3-70b-instruct" selected>llama-3-3-70b-instruct ✓</option>
+      <option value="meta-llama/llama-4-maverick-17b-128e-instruct-fp8">llama-4-maverick-17b ✓</option>
+    </optgroup>
+    <optgroup label="— Mistral (confirmed active) —">
+      <option value="mistralai/mistral-small-3-1-24b-instruct-2503">mistral-small-3-1-24b ✓</option>
+    </optgroup>
+    <optgroup label="— Granite (try if licensed) —">
+      <option value="ibm/granite-3-2-8b-instruct">granite-3-2-8b-instruct</option>
+      <option value="ibm/granite-3-2-2b-instruct">granite-3-2-2b-instruct</option>
+      <option value="ibm/granite-8b-code-instruct">granite-8b-code-instruct ✓</option>
+      <option value="ibm/granite-4-h-small">granite-4-h-small ✓</option>
+    </optgroup>
+    <optgroup label="— Legacy (may 404) —">
+      <option value="ibm/granite-3-2b-instruct">granite-3-2b-instruct (old)</option>
+      <option value="ibm/granite-3-8b-instruct">granite-3-8b-instruct (old)</option>
+    </optgroup>
   </select>
   <label>Max Tokens</label>
   <input type="number" id="wx-maxtok" value="2048" min="512" max="8192">
@@ -203,15 +225,34 @@ tr:nth-child(even) td{background:#fafafa}
 
   <h3>CI Run</h3>
   <label>Run Date</label>
-  <input type="date" id="run-date" value="2026-07-14">
+  <input type="date" id="run-date" value="2026-08-09">
   <label>Run ID</label>
-  <input type="text" id="run-id" value="#1566">
+  <input type="text" id="run-id" value="1592">
   <label>Web UI</label>
-  <input type="text" id="run-url" value="https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run/1566">
+  <input type="text" id="run-url" value="https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run/1592">
   <div class="btn-row" style="margin-top:8px">
     <button class="btn btn-ghost btn-sm" id="btn-load-run">Load Run Logs</button>
   </div>
   <div id="run-status" class="status"></div>
+
+  <h3>Import CI Mail</h3>
+  <p style="font-size:11px;color:#57606a;margin-bottom:6px;line-height:1.5">Paste the daily CI report email to auto-fill all fields.</p>
+  <textarea id="ingest-text" rows="5" placeholder="Daily run: 2026-08-09&#10;Test failures: canton-prototype, hades&#10;Web UI: https://…/ci-run/1592&#10;&#10;Test failures for test suite 'hades'&#10;===&#10;ci-error: invalid tap&#10;…" style="width:100%;font-size:11px;font-family:'SFMono-Regular',Consolas,monospace;border:1px solid #d1d5db;border-radius:5px;padding:6px 8px;resize:vertical;background:#fff;color:#1f2328;line-height:1.45"></textarea>
+  <div class="btn-row" style="margin-top:6px">
+    <button class="btn btn-primary btn-sm" id="btn-ingest">↳ Parse &amp; Load</button>
+    <button class="btn btn-ghost btn-sm" id="btn-ingest-clear">Clear</button>
+  </div>
+  <div id="ingest-status" class="status"></div>
+
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn btn-sm" id="btn-offline-analyse"
+      style="background:#064e3b;color:#a7f3d0;border:1px solid #34d399;font-weight:700"
+      title="Runs entirely in your browser — no server, no tuxmaker, no credentials needed">
+      ⚡ Analyse Offline
+    </button>
+    <button class="btn btn-ghost btn-sm" id="btn-offline-clear">✕</button>
+  </div>
+  <div id="offline-status" class="status"></div>
 
   <h3>Session</h3>
   <div class="btn-row">
@@ -228,24 +269,24 @@ tr:nth-child(even) td{background:#fafafa}
   <div class="run-bar">
     <div class="rb-field">
       <span class="rb-label">Run Date</span>
-      <span class="rb-value" id="rb-date">2026-07-14</span>
+      <span class="rb-value" id="rb-date">—</span>
     </div>
     <div class="rb-field">
       <span class="rb-label">Run ID</span>
-      <span class="rb-value" id="rb-id">#1566</span>
+      <span class="rb-value" id="rb-id">—</span>
     </div>
     <div class="rb-field">
       <span class="rb-label">Log Path (tuxmaker)</span>
-      <span class="rb-value">/home/ciuser/logs/daily/20260714/</span>
+      <span class="rb-value" id="rb-logpath">—</span>
     </div>
     <div class="rb-field">
       <span class="rb-label">Web UI</span>
-      <span class="rb-value"><a id="rb-url" href="https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run/1566" target="_blank">ci-run/1566 ↗</a></span>
+      <span class="rb-value"><a id="rb-url" href="" target="_blank">—</a></span>
     </div>
     <div class="spacer"></div>
     <div class="rb-field" style="align-items:flex-end">
       <span class="rb-label">Failing Suites</span>
-      <span class="rb-value" id="rb-fail-count" style="color:#f85149">13 / 16</span>
+      <span class="rb-value" id="rb-fail-count" style="color:#f85149">5 / 9</span>
     </div>
   </div>
 
@@ -262,12 +303,12 @@ tr:nth-child(even) td{background:#fafafa}
       <div class="sha-row">
         <div class="sha-box">
           <label>LAST PASSING SHA</label>
-          <input type="text" id="sha-good" placeholder="run #1565 · 2026-07-13">
+          <input type="text" id="sha-good" placeholder="run #1588 · 2026-08-05">
         </div>
         <div class="sha-arrow">→</div>
         <div class="sha-box">
           <label>FAILING RUN SHA</label>
-          <input type="text" id="sha-bad" placeholder="run #1566 · 2026-07-14">
+          <input type="text" id="sha-bad" placeholder="run #1592 · 2026-08-09">
         </div>
       </div>
       <div class="git-tabs">
@@ -278,19 +319,38 @@ tr:nth-child(even) td{background:#fafafa}
       </div>
       <div class="git-section active" id="gs-log">
         <div class="git-cmd">On tuxmaker: <code>git log --oneline $GOOD..$BAD -- arch/s390/kvm/ include/uapi/linux/kvm.h drivers/s390/ arch/s390/boot/</code></div>
-        <textarea class="code-area" id="git-log" rows="6" placeholder="f7e8d9c kvm/s390: add intercept for 0xb9af&#10;d3c2b1a drivers/s390/cio: remove sysfs 'pim'&#10;b9a8c7d arch/s390/boot: reipl: ccw path change&#10;c6d5e4f include/uapi/linux/kvm.h: add MEM_OP flag 0x3a"></textarea>
+        <textarea class="code-area" id="git-log" rows="6">f7e8d9c kvm/s390: add intercept for new instruction 0xb9af
+c6d5e4f include/uapi/linux/kvm.h: add KVM_S390_MEM_OP_F_INJECT_EXCEPTION flag (id 0x3a)
+d3c2b1a s390/mm: remove pim/pam sysfs entries
+b9a8c7d s390/reipl: change ccw reipl device path lookup</textarea>
       </div>
       <div class="git-section" id="gs-stat">
         <div class="git-cmd">On tuxmaker: <code>git diff --stat $GOOD..$BAD</code></div>
-        <textarea class="code-area" id="git-stat" rows="6" placeholder=" arch/s390/kvm/intercept.c    |  47 ++++++--&#10; include/uapi/linux/kvm.h      |  12 ++&#10; drivers/s390/cio/device.c     |   8 ----&#10; arch/s390/boot/reipl.c        |  31 ++---"></textarea>
+        <textarea class="code-area" id="git-stat" rows="6"> arch/s390/kvm/intercept.c      |  47 ++++++--
+ arch/s390/kvm/kvm-s390.c       | 123 ++++++++++++-------
+ include/uapi/linux/kvm.h        |  12 ++
+ arch/s390/mm/pgtable.c          |  18 ---
+ arch/s390/kernel/reipl.c        |  34 ++++--</textarea>
       </div>
       <div class="git-section" id="gs-patch">
         <div class="git-cmd">On tuxmaker: <code>git diff $GOOD..$BAD -- arch/s390/kvm/ include/uapi/linux/kvm.h</code></div>
-        <textarea class="code-area" id="git-patch" rows="8" placeholder="diff --git a/include/uapi/linux/kvm.h b/include/uapi/linux/kvm.h&#10;+#define KVM_S390_MEMOP_F_INJECT_EXCEPTION (1ULL << 1)&#10;..."></textarea>
+        <textarea class="code-area" id="git-patch" rows="8">diff --git a/include/uapi/linux/kvm.h b/include/uapi/linux/kvm.h
++#define KVM_S390_MEMOP_F_INJECT_EXCEPTION (1ULL << 1)  /* NEW id 0x3a */
+
+diff --git a/arch/s390/kvm/intercept.c b/arch/s390/kvm/intercept.c
++       case 0xb9af: return kvm_s390_handle_b9af(vcpu);</textarea>
       </div>
       <div class="git-section" id="gs-env">
         <div class="git-cmd">On tuxmaker: <code>rpm -qa | grep -E 's390-tools|qemu|libvirt|kernel' | sort</code></div>
-        <textarea class="code-area" id="git-env" rows="6" placeholder="# TODAY run #1566&#10;s390-tools-2.34.0  ← CHANGED from 2.33.0&#10;qemu-8.2.1&#10;kernel-5.15.0-20260714&#10;&#10;# YESTERDAY run #1565&#10;s390-tools-2.33.0"></textarea>
+        <textarea class="code-area" id="git-env" rows="6"># TODAY run #1592 · 2026-08-09
+s390-tools-2.34.0
+qemu-8.2.1
+kernel-7.2.0-20260809.rc6.git0.1c2c67f1a900.300.fc44.s390x
+
+# LAST PASSING run #1588 · 2026-08-05
+s390-tools-2.34.0
+qemu-8.2.1
+kernel-7.2.0-20260805.rc5.git2.300.fc44.s390x</textarea>
       </div>
     </div>
   </div>
@@ -302,7 +362,9 @@ tr:nth-child(even) td{background:#fafafa}
       <div class="abar-sub">Git delta + all failure logs → WatsonX identifies exact introducing commit(s)</div>
     </div>
     <button class="btn btn-primary" id="btn-analyse-all">⚡ Analyse All Projects</button>
+    <button class="btn btn-secondary" id="btn-analyse-local" title="No API key needed — runs entirely on this server">⚙ Local Analysis</button>
     <button class="btn btn-secondary" id="btn-correlate">🔗 Correlate</button>
+    <button class="btn btn-secondary" id="btn-export-report" title="Download a self-contained HTML root-cause report">⬇ Export Report</button>
   </div>
 
   <!-- Cross-project correlation -->
@@ -332,22 +394,32 @@ tr:nth-child(even) td{background:#fafafa}
     <table>
       <thead><tr><th style="width:170px">Suite</th><th>Cat</th><th>Status</th><th>Failure log snippet</th></tr></thead>
       <tbody id="kvm-suite-tbody">
-        <tr><td><code>canton-prototype</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="canton-prototype" data-proj="kvm" rows="2">BUG: unable to handle page fault for address: 0000000000000000
-RIP: kvm_s390_handle_sie+0x2a3/0x4c0 [kvm]</textarea></td></tr>
+        <tr><td><code>canton-prototype</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="canton-prototype" data-proj="kvm" rows="2">ci-error: test suite script failure
+BUG: unable to handle page fault for address: 0000000000000000
+RIP: kvm_s390_handle_sie+0x2a3/0x4c0 [kvm]
+failed on: devel z17 LPAR b46lp66</textarea></td></tr>
         <tr><td><code>ci-reipl</code></td><td><span class="badge bi">Infra</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="ci-reipl" data-proj="kvm" rows="2">chreipl: open /sys/firmware/reipl/ccw/device: No such file or directory
 zipl: error: unable to find re-IPL device</textarea></td></tr>
-        <tr><td><code>hades</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades" data-proj="kvm" rows="2">kvm-s390: intercept of unimplemented instruction 0xb9af at 0x80001234
-FAIL: inject_pfault_done (timeout waiting for pfault token interrupt)</textarea></td></tr>
-        <tr><td><code>hades-monolithic</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades-monolithic" data-proj="kvm" rows="2">kvm-s390: intercept of unimplemented instruction 0xb9af at 0x80001234
-FAIL: inject_pfault_done (same failure, monolithic config)</textarea></td></tr>
-        <tr><td><code>hades-withHW</code></td><td><span class="badge bh">HW</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades-withHW" data-proj="kvm" rows="2">CPACF query: missing KDSA facility bit
-kvm-s390: hardware SIE entry failed cc=3 (validity intercept)</textarea></td></tr>
-        <tr><td><code>kvm-selftests</code></td><td><span class="badge bt">Test</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="kvm-selftests" data-proj="kvm" rows="2">s390x/memop.c:312: ret == -1 && errno == EINVAL
-KVM_S390_MEM_OP ioctl unexpectedly succeeded with new flags</textarea></td></tr>
-        <tr><td><code>kvm-unit-tests-kvm</code></td><td><span class="badge bt">Test</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="kvm-unit-tests-kvm" data-proj="kvm" rows="2">FAIL sthyi: unexpected facility bits in response block byte[8]
-FAIL pfault: timeout waiting for pfault token interrupt</textarea></td></tr>
-        <tr><td><code>s390-tools</code></td><td><span class="badge bc">Config</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="s390-tools" data-proj="kvm" rows="2">lscss: sysfs attribute 'pim' not found under /sys/bus/ccw/devices/0.0.0150
-chzdev: kernel module cio not loaded or sysfs layout changed</textarea></td></tr>
+        <tr><td><code>hades</code></td><td><span class="badge bk">Kernel</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades" data-proj="kvm" rows="2">ci-error: invalid tap
+ci-error: ssh connection error
+tests.test_se.AsyncTeardownRebootTestCase.runTest failed on: devel z16 LPAR a46lp23
+tests.test_virtio_serial.VirtioSerialSocatHostToGuestPCITestCase.runTest failed on: git z17 KVM b46lp70kvm01</textarea></td></tr>
+        <tr><td><code>hades-monolithic</code></td><td><span class="badge bk">Kernel</span></td><td class="st-pass">PASS</td><td><textarea class="log-in" data-suite="hades-monolithic" data-proj="kvm" rows="2" style="color:#57606a">ci-error: test suite script failure
+failed on: devel z16 z/VM a8345044 hades-monolithic_devel_a8345044.tap</textarea></td></tr>
+        <tr><td><code>hades-withHW</code></td><td><span class="badge bh">HW</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="hades-withHW" data-proj="kvm" rows="2">ci-error: install test suite packages
+tests.test_vfio_pci_iommufd.VfioPciIommufdRoceRebootTestCase.runTest failed on: debug z17 LPAR b46lp63
+tests.test_vfio_pci_roce.VfioPciRoceRebootTestCase.runTest failed on: debug z17 LPAR b46lp63
+tests.test_virtio_net_pci_roce.VirtioNetPciRoceIperfMTUTestCase.runTest failed on: debug/devel z17 LPAR b46lp63</textarea></td></tr>
+        <tr><td><code>kvm-selftests</code></td><td><span class="badge bt">Test</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="kvm-selftests" data-proj="kvm" rows="2">ci-error: invalid tap
+ci-error: ssh connection error
+ci-error: test suite timeout
+failed on: kasan z16 z/VM a8345044 kvm-selftests_kasan_a8345044.tap</textarea></td></tr>
+        <tr><td><code>kvm-unit-tests-kvm</code></td><td><span class="badge bt">Test</span></td><td class="st-fail">FAIL</td><td><textarea class="log-in" data-suite="kvm-unit-tests-kvm" data-proj="kvm" rows="2">ci-error: test suite timeout
+firq-linear-cpu-ids-kvm_PV: timeout; duration=30
+firq-nonlinear-cpu-ids-kvm_PV: timeout; duration=30
+failed on: z16 z/VM a8345044 and z16/z17 LPAR multiple systems</textarea></td></tr>
+        <tr><td><code>s390-tools</code></td><td><span class="badge bc">Config</span></td><td class="st-pass">PASS</td><td><textarea class="log-in" data-suite="s390-tools" data-proj="kvm" rows="2" style="color:#57606a">ci-error: test suite script failure
+s390-tools 2.34.0 upgrade: chreipl path /sys/firmware/reipl/ccw/device not found</textarea></td></tr>
       </tbody>
     </table>
     <div class="btn-row">
@@ -356,7 +428,7 @@ chzdev: kernel module cio not loaded or sysfs layout changed</textarea></td></tr
     </div>
     <div class="result-box">
       <div class="result-head"><h4>CIIQ — KVM Root-Cause Analysis</h4></div>
-      <div class="result-body empty" id="kvm-body">Click <em>Analyse KVM</em> to identify introducing commit(s) for all 8 failures.</div>
+      <div class="result-body empty" id="kvm-body">Click <em>Analyse KVM</em> to identify introducing commit(s) for the 5 FAIL suites.</div>
       <div class="tok-bar" id="kvm-tok" style="display:none"><span>Model: <strong id="kvm-model">—</strong></span><span>Input: <strong id="kvm-in">—</strong></span><span>Output: <strong id="kvm-out">—</strong></span></div>
     </div>
   </div>
@@ -469,10 +541,23 @@ function delta() {
 function collectLogs(proj) {
   var result = {};
   document.querySelectorAll('.log-in[data-proj="' + proj + '"]').forEach(function(el) {
-    var v = el.value.trim();
-    if (v) result[el.dataset.suite] = v;
+    result[el.dataset.suite] = el.value.trim();
   });
   return result;
+}
+
+function collectSuiteStatus() {
+  // Read PASS/FAIL from the status cells in all suite tables
+  var status = {};
+  document.querySelectorAll('.log-in[data-suite]').forEach(function(el) {
+    var tr = el.closest('tr');
+    if (!tr) return;
+    var tds = tr.querySelectorAll('td');
+    if (tds.length < 3) return;
+    var cls = tds[2].className;
+    status[el.dataset.suite] = cls === 'st-pass' ? 'PASS' : 'FAIL';
+  });
+  return status;
 }
 
 function setBody(id, html, cls) {
@@ -520,38 +605,79 @@ function h(s) {
 //  Format WatsonX markdown → HTML
 // ─────────────────────────────────────────────────────────────────
 function fmt(raw) {
-  var t = h(raw);
-  // fenced code blocks
-  t = t.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, c) { return '<pre>' + c + '</pre>'; });
-  // inline code
-  t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-  // bold
-  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-  // h2 headings
+  // Step 1: operate on raw markdown BEFORE html-escaping so section patterns work cleanly
+  var md = raw;
+
+  // Extract fenced code blocks before any other processing (protect their content)
+  var codeBlocks = [];
+  md = md.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, c) {
+    codeBlocks.push(c);
+    return '\x00CODE' + (codeBlocks.length - 1) + '\x00';
+  });
+
+  // Section-level callout wrappers (match ## N. <title> + body up to next ##)
+  // Must run BEFORE h() escaping so ## markers are still present
+  md = md.replace(/^## (\d+\.\s*Introducing Commit[^\n]*)\n((?:(?!^##)[\s\S])*?)(?=^##|$)/gm,
+    function(_, title, body) {
+      return '\x01COMMIT\x01' + title.trim() + '\x01BODY\x01' + body + '\x01END\x01';
+    });
+  md = md.replace(/^## (\d+\.\s*Root Cause[^\n]*)\n((?:(?!^##)[\s\S])*?)(?=^##|$)/gm,
+    function(_, title, body) {
+      return '\x01RC\x01' + title.trim() + '\x01BODY\x01' + body + '\x01END\x01';
+    });
+  md = md.replace(/^## (\d+\.\s*Recommended Fix[^\n]*)\n((?:(?!^##)[\s\S])*?)(?=^##|$)/gm,
+    function(_, title, body) {
+      return '\x01FIX\x01' + title.trim() + '\x01BODY\x01' + body + '\x01END\x01';
+    });
+  md = md.replace(/^## (\d+\.\s*(?:Affected Subsystems|Why \w+ Is Affected|Verification|Cross-Project Correlation|Dependency Chain|Minimum Fix|Triage|Reproducer)[^\n]*)\n((?:(?!^##)[\s\S])*?)(?=^##|$)/gm,
+    function(_, title, body) {
+      return '\x01HDR\x01' + title.trim() + '\x01BODY\x01' + body + '\x01END\x01';
+    });
+
+  // Step 2: HTML-escape remaining plain text
+  var t = h(md);
+
+  // Step 3: restore code blocks as dark pre elements
+  t = t.replace(/\x00CODE(\d+)\x00/g, function(_, i) {
+    return '<pre>' + h(codeBlocks[parseInt(i)]) + '</pre>';
+  });
+
+  // Step 4: render section callouts
+  function renderBody(b) {
+    // inline markdown inside callout body
+    b = b.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    b = b.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    b = b.replace(/^[-•] (.+)$/gm, '&bull; $1<br>');
+    b = b.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    b = b.replace(/^\d+\. (.+)$/gm, '<span style="display:block;margin-left:14px;margin-bottom:2px">$&</span>');
+    b = b.replace(/\n/g, '<br>');
+    return b.replace(/^(<br>)+|(<br>)+$/g, '');
+  }
+  t = t.replace(/\x01COMMIT\x01([^\x01]*)\x01BODY\x01([\s\S]*?)\x01END\x01/g,
+    function(_, title, body) {
+      return '<div class="callout-commit"><strong style="color:#58a6ff;display:block;margin-bottom:6px">' + title + '</strong>' + renderBody(body) + '</div>';
+    });
+  t = t.replace(/\x01RC\x01([^\x01]*)\x01BODY\x01([\s\S]*?)\x01END\x01/g,
+    function(_, title, body) {
+      return '<div class="callout-rc"><strong style="display:block;margin-bottom:6px">' + title + '</strong>' + renderBody(body) + '</div>';
+    });
+  t = t.replace(/\x01FIX\x01([^\x01]*)\x01BODY\x01([\s\S]*?)\x01END\x01/g,
+    function(_, title, body) {
+      return '<div class="callout-fix"><strong style="display:block;margin-bottom:6px">' + title + '</strong>' + renderBody(body) + '</div>';
+    });
+  t = t.replace(/\x01HDR\x01([^\x01]*)\x01BODY\x01([\s\S]*?)\x01END\x01/g,
+    function(_, title, body) {
+      return '<strong style="display:block;font-size:13px;margin:12px 0 4px;border-bottom:1px solid #e5e7eb;padding-bottom:2px">' + title + '</strong>' + renderBody(body);
+    });
+
+  // Step 5: remaining unmatched ## headings, inline code, bold, lists, newlines
   t = t.replace(/^## (.+)$/gm, '<strong style="display:block;font-size:13px;margin:12px 0 4px;border-bottom:1px solid #e5e7eb;padding-bottom:2px">$1</strong>');
-  // h3 headings
   t = t.replace(/^### (.+)$/gm, '<strong style="display:block;font-size:12px;margin:8px 0 3px;color:#57606a;text-transform:uppercase;letter-spacing:.04em">$1</strong>');
-  // Introducing Commit callout
-  t = t.replace(/(Introducing Commit[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
-    return '<div class="callout-commit"><strong style="color:#58a6ff">' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
-  });
-  // Root Cause callout
-  t = t.replace(/(Root Cause[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
-    return '<div class="callout-rc"><strong>' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
-  });
-  // Fix callout
-  t = t.replace(/(Recommended Fix[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
-    return '<div class="callout-fix"><strong>' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
-  });
-  // Correlation callout
-  t = t.replace(/(Cross-Project Correlation[^\n]*\n)((?:(?!## )[^\n]*\n?)*)/g, function(m, h2, body) {
-    return '<div class="callout-corr"><strong>' + h2.trim() + '</strong><br>' + body.replace(/\n/g, '<br>') + '</div>';
-  });
-  // bullet lists
+  t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
   t = t.replace(/^[-•] (.+)$/gm, '&bull; $1<br>');
-  // numbered list
   t = t.replace(/^\d+\. (.+)$/gm, '<span style="display:block;margin-left:14px;margin-bottom:2px">$&</span>');
-  // remaining newlines
   t = t.replace(/\n/g, '<br>');
   return t;
 }
@@ -592,39 +718,55 @@ function testConnection() {
 //  Per-project analysis
 // ─────────────────────────────────────────────────────────────────
 function analyse(proj) {
+  if (!window.deltaReady) {
+    setStatus('run-status', 'info', 'Please wait — suite logs are still loading…'); return;
+  }
   var wx  = wxConfig();
   var run = runInfo();
-  if (!window.serverCreds) {
-    if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
-    if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
-  }
+  var useLocal = !window.serverCreds && (!wx.api_key || !wx.project_id);
 
   var logs = collectLogs(proj);
-  if (!Object.keys(logs).length) { alert('No log snippets for ' + proj + '.'); return; }
-
-  setBody(proj + '-body', spin('Calling CIIQ backend…'));
+  setBody(proj + '-body', spin(useLocal ? 'Running local analysis…' : 'Calling CIIQ backend…'));
   document.getElementById('btn-' + proj).disabled = true;
 
-  apiPost('/api/analyse/' + proj, {
-    api_key:    wx.api_key,
-    project_id: wx.project_id,
-    delta:      delta(),
-    suite_logs: logs,
-    run_date:   run.run_date,
-    run_id:     run.run_id,
-    wx_overrides: {
-      region:     wx.region,
-      model:      wx.model,
-      max_tokens: wx.max_tokens,
-      custom_url: wx.custom_url,
-      project_id: wx.project_id
-    }
-  })
+  var path = useLocal ? '/api/analyse/local' : '/api/analyse/' + proj;
+  var suiteStatus = collectSuiteStatus();
+  var body = useLocal
+    ? { delta: delta(), suite_logs: { kvm: {}, qemu: {}, libvirt: {} },
+        suite_status: suiteStatus, run_date: run.run_date, run_id: run.run_id }
+    : { api_key: wx.api_key, project_id: wx.project_id, delta: delta(), suite_logs: logs,
+        run_date: run.run_date, run_id: run.run_id,
+        wx_overrides: { region: wx.region, model: wx.model, max_tokens: wx.max_tokens,
+                        custom_url: wx.custom_url, project_id: wx.project_id } };
+  if (useLocal) body.suite_logs[proj] = logs;
+
+  apiPost(path, body)
   .then(function(r) {
-    if (!r.ok) throw new Error(r.error || 'Backend error');
-    analysisCache[proj] = r.analysis;
-    setBody(proj + '-body', fmt(r.analysis));
-    showTok(proj, r.model, r.input_tokens, r.generated_tokens);
+    if (!r.ok) {
+      // Auto-fallback to local analysis on 429 rate-limit (fires regardless of serverCreds)
+      if (!useLocal && r.error && r.error.indexOf('429') !== -1) {
+        setBody(proj + '-body', spin('WatsonX rate-limited (429) — falling back to local analysis…'));
+        var run_ = runInfo();
+        var localBody = { delta: delta(), suite_logs: {}, suite_status: collectSuiteStatus(),
+                          run_date: run_.run_date, run_id: run_.run_id };
+        localBody.suite_logs[proj] = collectLogs(proj);
+        return apiPost('/api/analyse/local', localBody).then(function(lr) {
+          if (!lr.ok) throw new Error(lr.error || 'Local fallback failed');
+          var text = lr.results && lr.results[proj] && lr.results[proj].analysis;
+          if (!text) throw new Error('No local analysis for ' + proj);
+          analysisCache[proj] = text;
+          setBody(proj + '-body', fmt(text));
+          showTok(proj, 'local (429 fallback)', undefined, undefined);
+          refreshHistory();
+        });
+      }
+      throw new Error(r.error || 'Backend error');
+    }
+    var text = useLocal ? (r.results && r.results[proj] && r.results[proj].analysis) : r.analysis;
+    if (!text) throw new Error('No analysis returned for ' + proj);
+    analysisCache[proj] = text;
+    setBody(proj + '-body', fmt(text));
+    showTok(proj, useLocal ? 'local (no LLM)' : r.model, r.input_tokens, r.generated_tokens);
     refreshHistory();
   })
   .catch(function(e) {
@@ -637,56 +779,77 @@ function analyse(proj) {
 //  Analyse all projects
 // ─────────────────────────────────────────────────────────────────
 function analyseAll() {
+  if (!window.deltaReady) {
+    setStatus('run-status', 'info', 'Please wait — suite logs are still loading…'); return;
+  }
   var wx  = wxConfig();
   var run = runInfo();
-  if (!window.serverCreds) {
-    if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
-    if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
-  }
+  var useLocal = !window.serverCreds && (!wx.api_key || !wx.project_id);
 
   var allLogs = { kvm: collectLogs('kvm'), qemu: collectLogs('qemu'), libvirt: collectLogs('libvirt') };
-  ['kvm','qemu','libvirt'].forEach(function(p) { setBody(p + '-body', spin('Queued…')); });
+  ['kvm','qemu','libvirt'].forEach(function(p) { setBody(p + '-body', spin(useLocal ? 'Running local analysis…' : 'Queued…')); });
 
   document.getElementById('btn-analyse-all').disabled = true;
 
-  apiPost('/api/analyse/all', {
-    api_key:    wx.api_key,
-    project_id: wx.project_id,
-    delta:      delta(),
-    suite_logs: allLogs,
-    run_date:   run.run_date,
-    run_id:     run.run_id,
-    wx_overrides: {
-      region:     wx.region,
-      model:      wx.model,
-      max_tokens: wx.max_tokens,
-      custom_url: wx.custom_url,
-      project_id: wx.project_id
-    }
-  })
+  var path = useLocal ? '/api/analyse/local' : '/api/analyse/all';
+  var reqBody = useLocal
+    ? { delta: delta(), suite_logs: allLogs, suite_status: collectSuiteStatus(),
+        run_date: run.run_date, run_id: run.run_id }
+    : { api_key: wx.api_key, project_id: wx.project_id, delta: delta(), suite_logs: allLogs,
+        run_date: run.run_date, run_id: run.run_id,
+        wx_overrides: { region: wx.region, model: wx.model, max_tokens: wx.max_tokens,
+                        custom_url: wx.custom_url, project_id: wx.project_id } };
+
+  apiPost(path, reqBody)
   .then(function(r) {
-    if (!r.ok) throw new Error(r.error || 'Backend error');
+    if (!r.ok) {
+      if (!useLocal && r.error && r.error.indexOf('429') !== -1)
+        throw new Error(r.error);  // bubble to .catch for unified 429 fallback
+      throw new Error(r.error || 'Backend error');
+    }
     Object.keys(r.results || {}).forEach(function(proj) {
       var res = r.results[proj];
-      analysisCache[proj] = res.analysis;
-      setBody(proj + '-body', fmt(res.analysis));
-      showTok(proj, r.model, res.input_tokens, res.generated_tokens);
+      var text = res.analysis || res;
+      analysisCache[proj] = text;
+      setBody(proj + '-body', fmt(text));
+      showTok(proj, useLocal ? 'local (no LLM)' : r.model, res.input_tokens, res.generated_tokens);
     });
     Object.keys(r.errors || {}).forEach(function(proj) {
       setBody(proj + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(r.errors[proj]) + '</div>');
     });
     refreshHistory();
-    // Auto-suggest Correlate when 2+ projects have results
     var _cached = Object.keys(analysisCache);
     if (_cached.length >= 2) {
-      setCorr('<span style="color:#57606a">Analysis complete for <strong>' +
+      setCorr('<span style="color:#57606a">' + (useLocal ? 'Local analysis' : 'Analysis') + ' complete for <strong>' +
         _cached.join(', ') + '</strong>. Click <strong>Correlate</strong> to identify the root cause.</span>');
     }
   })
   .catch(function(e) {
+    var is429 = e.message && e.message.indexOf('429') !== -1;
+    if (is429 && !useLocal) {  // !useLocal: don't loop if we're already on the local path
+      // Rate-limited — fall the whole batch back to local
+      setStatus('run-status', 'info', 'WatsonX rate-limited (429) — falling back to local analysis for all projects…');
+      var run = runInfo();
+      var localReq = { delta: delta(), suite_logs: allLogs, suite_status: collectSuiteStatus(),
+                       run_date: run.run_date, run_id: run.run_id };
+      apiPost('/api/analyse/local', localReq).then(function(lr) {
+        if (!lr.ok) { setStatus('run-status', 'err', 'Local fallback failed: ' + (lr.error || '?')); return; }
+        Object.keys(lr.results || {}).forEach(function(proj) {
+          var text = lr.results[proj].analysis || '';
+          analysisCache[proj] = text;
+          setBody(proj + '-body', fmt(text));
+          showTok(proj, 'local (429 fallback)', undefined, undefined);
+        });
+        setStatus('run-status', 'ok', '⚙ Local analysis complete (WatsonX rate-limited)');
+        refreshHistory();
+      }).catch(function(le) {
+        setStatus('run-status', 'err', 'Local fallback error: ' + le.message);
+      });
+      return;
+    }
     ['kvm','qemu','libvirt'].forEach(function(p) {
       var _el = document.getElementById(p + '-body');
-      if (_el && _el.textContent.indexOf('Queued') !== -1) {
+      if (_el && (_el.textContent.indexOf('Queued') !== -1 || _el.textContent.indexOf('local analysis') !== -1)) {
         setBody(p + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(e.message) + '</div>');
       }
     });
@@ -695,57 +858,134 @@ function analyseAll() {
 }
 
 // ─────────────────────────────────────────────────────────────────
+//  Local analysis (no LLM)
+// ─────────────────────────────────────────────────────────────────
+function analyseLocal() {
+  if (!window.deltaReady) {
+    setStatus('run-status', 'info', 'Please wait — suite logs are still loading…'); return;
+  }
+  var run = runInfo();
+  var allLogs = { kvm: collectLogs('kvm'), qemu: collectLogs('qemu'), libvirt: collectLogs('libvirt') };
+  var hasAny = Object.keys(allLogs).some(function(p) { return Object.keys(allLogs[p]).length > 0; });
+  if (!hasAny) { alert('No log snippets found. Load a run first.'); return; }
+
+  ['kvm','qemu','libvirt'].forEach(function(p) { setBody(p + '-body', spin('Running local analysis…')); });
+  document.getElementById('btn-analyse-local').disabled = true;
+
+  apiPost('/api/analyse/local', {
+    delta:        delta(),
+    suite_logs:   allLogs,
+    suite_status: collectSuiteStatus(),
+    run_date:     run.run_date,
+    run_id:       run.run_id,
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error(r.error || 'Backend error');
+    Object.keys(r.results || {}).forEach(function(proj) {
+      var res = r.results[proj];
+      analysisCache[proj] = res.analysis;
+      setBody(proj + '-body', fmt(res.analysis));
+      showTok(proj, 'local (no LLM)', '—', '—');
+    });
+    Object.keys(r.errors || {}).forEach(function(proj) {
+      setBody(proj + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(r.errors[proj]) + '</div>');
+    });
+    refreshHistory();
+    var cached = Object.keys(analysisCache);
+    if (cached.length >= 2) {
+      setCorr('<span style="color:#57606a">Local analysis complete for <strong>' +
+        cached.join(', ') + '</strong>. Click <strong>Correlate</strong> to cross-project report.</span>');
+    }
+  })
+  .catch(function(e) {
+    ['kvm','qemu','libvirt'].forEach(function(p) {
+      var el = document.getElementById(p + '-body');
+      if (el && el.textContent.indexOf('local analysis') !== -1)
+        setBody(p + '-body', '<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(e.message) + '</div>');
+    });
+  })
+  .finally(function() { document.getElementById('btn-analyse-local').disabled = false; });
+}
+
+// ─────────────────────────────────────────────────────────────────
 //  Correlation
 // ─────────────────────────────────────────────────────────────────
 function correlate() {
   var wx  = wxConfig();
   var run = runInfo();
-  if (!window.serverCreds) {
-    if (!wx.api_key)    { alert('Enter WatsonX API key.'); return; }
-    if (!wx.project_id) { alert('Enter WatsonX Project ID.'); return; }
+  var useLocal = !window.serverCreds && (!wx.api_key || !wx.project_id);
+
+  if (!Object.keys(analysisCache).length) {
+    setCorr('<span style="color:#92400e">Run at least one per-project analysis first.</span>'); return;
   }
 
-  setCorr(spin('Running cross-project correlation…'));
+  setCorr(spin(useLocal ? 'Running local correlation…' : 'Running cross-project correlation…'));
   document.getElementById('btn-correlate').disabled = true;
 
-  apiPost('/api/correlate', {
-    api_key:    wx.api_key,
-    project_id: wx.project_id,
-    delta:      delta(),
-    analyses:   analysisCache,
-    run_date:   run.run_date,
-    run_id:     run.run_id,
-    wx_overrides: {
-      region:     wx.region,
-      model:      wx.model,
-      max_tokens: wx.max_tokens,
-      custom_url: wx.custom_url,
-      project_id: wx.project_id
-    }
-  })
+  // Route directly to local if no LLM credentials available
+  var corrPath = useLocal ? '/api/correlate/local'
+    : '/api/correlate';
+  var corrBody = useLocal
+    ? { delta: delta(), analyses: analysisCache, run_date: run.run_date, run_id: run.run_id }
+    : { api_key: wx.api_key, project_id: wx.project_id, delta: delta(), analyses: analysisCache,
+        run_date: run.run_date, run_id: run.run_id,
+        wx_overrides: { region: wx.region, model: wx.model, max_tokens: wx.max_tokens,
+                        custom_url: wx.custom_url, project_id: wx.project_id } };
+
+  apiPost(corrPath, corrBody)
   .then(function(r) {
-    if (!r.ok) throw new Error(r.error || 'Backend error');
-    setCorr(fmt(r.correlation));
-    var t = document.getElementById('corr-tok');
-    t.style.display = 'flex';
-    document.getElementById('corr-model').textContent = r.model || '—';
-    document.getElementById('corr-in').textContent    = r.input_tokens !== undefined ? r.input_tokens : '—';
-    document.getElementById('corr-out').textContent   = r.generated_tokens !== undefined ? r.generated_tokens : '—';
+    if (!r.ok) {
+      // Bubble 429 to .catch so the fallback handler can take over
+      if (!useLocal && r.error && r.error.indexOf('429') !== -1)
+        throw new Error(r.error);
+      throw new Error(r.error || 'Backend error');
+    }
+    _showCorrResult(r, useLocal ? 'local (no LLM)' : r.model);
     refreshHistory();
   })
   .catch(function(e) {
+    // On 429, fall back to local correlation (works regardless of serverCreds)
+    if (!useLocal && e.message && e.message.indexOf('429') !== -1) {
+      setCorr(spin('WatsonX rate-limited (429) — falling back to local correlation…'));
+      apiPost('/api/correlate/local', {
+        delta:    delta(),
+        analyses: analysisCache,
+        run_date: run.run_date,
+        run_id:   run.run_id
+      }).then(function(lr) {
+        if (!lr.ok) throw new Error(lr.error || 'Local correlation failed');
+        _showCorrResult(lr, 'local (429 fallback)');
+        refreshHistory();
+      }).catch(function(le) {
+        setCorr('<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(le.message) + '</div>');
+      }).finally(function() { document.getElementById('btn-correlate').disabled = false; });
+      return;  // don't fall through to the error display below
+    }
     setCorr('<div class="callout-rc"><strong style="color:#991b1b">Error</strong><br>' + h(e.message) + '</div>');
   })
   .finally(function() { document.getElementById('btn-correlate').disabled = false; });
 }
 
+function _showCorrResult(r, modelLabel) {
+  setCorr(fmt(r.correlation));
+  var t = document.getElementById('corr-tok');
+  t.style.display = 'flex';
+  document.getElementById('corr-model').textContent = modelLabel || r.model || '—';
+  document.getElementById('corr-in').textContent    = r.input_tokens  !== undefined ? r.input_tokens  : '—';
+  document.getElementById('corr-out').textContent   = r.generated_tokens !== undefined ? r.generated_tokens : '—';
+}
+
 // ─────────────────────────────────────────────────────────────────
-//  Load run logs from backend
+//  Load run logs + git delta from backend
 // ─────────────────────────────────────────────────────────────────
 function loadRunLogs() {
-  var date = document.getElementById('run-date').value.replace(/-/g, '');
-  setStatus('run-status', 'info', 'Loading suite logs from server…');
-  fetch('/api/run/' + date + '/suites')
+  var dateDash = document.getElementById('run-date').value;  // YYYY-MM-DD
+  var dateRaw  = dateDash.replace(/-/g, '');
+  window.deltaReady = false;
+  setStatus('run-status', 'info', 'Loading suite logs…');
+
+  // ── 1. Suite logs ─────────────────────────────────────────────
+  fetch('/api/run/' + dateRaw + '/suites')
     .then(function(r) { return r.json(); })
     .then(function(r) {
       if (!r.ok) { setStatus('run-status', 'err', r.error || 'Failed'); return; }
@@ -753,14 +993,43 @@ function loadRunLogs() {
       Object.keys(r.suite_logs || {}).forEach(function(proj) {
         Object.keys(r.suite_logs[proj] || {}).forEach(function(suite) {
           var el = document.querySelector('.log-in[data-proj="' + proj + '"][data-suite="' + suite + '"]');
-          if (el && r.suite_logs[proj][suite]) {
-            el.value = r.suite_logs[proj][suite];
-            count++;
-          }
+          if (el && r.suite_logs[proj][suite]) { el.value = r.suite_logs[proj][suite]; count++; }
         });
       });
-      if (r.sha_bad) document.getElementById('sha-bad').value = r.sha_bad;
-      setStatus('run-status', 'ok', '✓ Loaded ' + count + ' suite log snippets');
+      if (r.sha_bad)  document.getElementById('sha-bad').value  = r.sha_bad;
+      if (r.sha_good) document.getElementById('sha-good').value = r.sha_good;
+      setStatus('run-status', 'ok', '✓ Loaded ' + count + ' suite log snippets — fetching git delta…');
+
+      // ── 2. Git delta via tuxmaker SSH ─────────────────────────
+      fetch('/api/delta/' + dateDash)
+        .then(function(r2) { return r2.json(); })
+        .then(function(d) {
+          if (!d.ok) {
+            setStatus('run-status', 'info',
+              '✓ Suite logs loaded. Git delta: ' + (d.error || 'not available') +
+              ' — paste git log manually.');
+            window.deltaReady = true;
+            return;
+          }
+          // Unwrap delta object (API returns {ok, delta: {sha_good, git_log, ...}})
+          var dt = d.delta || d;  // support both wrapped and flat responses
+          // Populate SHA fields
+          if (dt.sha_bad)  document.getElementById('sha-bad').value  = dt.sha_bad;
+          if (dt.sha_good) document.getElementById('sha-good').value = dt.sha_good;
+          // Populate git delta text areas
+          if (dt.git_log)       document.getElementById('git-log').value   = dt.git_log;
+          if (dt.git_diff_stat) document.getElementById('git-stat').value  = dt.git_diff_stat;
+          if (dt.git_patch)     document.getElementById('git-patch').value = dt.git_patch;
+          window.deltaReady = true;
+          var src = d.source === 'cache' ? ' (cached)' : d.source === 'ssh' ? ' (via SSH)' : ' (local)';
+          setStatus('run-status', 'ok',
+            '✓ Suite logs + git delta loaded' + src + ' — ready to analyse');
+        })
+        .catch(function() {
+          window.deltaReady = true;
+          setStatus('run-status', 'info',
+            '✓ Suite logs loaded. Tuxmaker unreachable — paste git log manually.');
+        });
     })
     .catch(function(e) { setStatus('run-status', 'err', e.message); });
 }
@@ -794,44 +1063,267 @@ function refreshHistory() {
 //  Example data
 // ─────────────────────────────────────────────────────────────────
 function loadExample() {
-  document.getElementById('sha-good').value = 'a1b2c3d4  (2026-07-13 · run #1565)';
-  document.getElementById('sha-bad').value  = 'f7e8d9c0  (2026-07-14 · run #1566)';
+  // Git delta — run 1592 · 2026-08-09 (5/9 FAIL)
+  document.getElementById('sha-good').value = 'run #1588 · 2026-08-05';
+  document.getElementById('sha-bad').value  = 'run #1592 · 2026-08-09';
   document.getElementById('git-log').value =
     'f7e8d9c kvm/s390: add intercept for new instruction 0xb9af\n' +
-    'd3c2b1a drivers/s390/cio: remove deprecated sysfs attribute \'pim\'\n' +
-    'b9a8c7d arch/s390/boot: reipl: switch ccw device path\n' +
-    'c6d5e4f include/uapi/linux/kvm.h: add KVM_S390_MEM_OP_F_INJECT_EXCEPTION flag (id 0x3a)';
+    'c6d5e4f include/uapi/linux/kvm.h: add KVM_S390_MEM_OP_F_INJECT_EXCEPTION flag (id 0x3a)\n' +
+    'd3c2b1a s390/mm: remove pim/pam sysfs entries\n' +
+    'b9a8c7d s390/reipl: change ccw reipl device path lookup';
   document.getElementById('git-stat').value =
     ' arch/s390/kvm/intercept.c      |  47 ++++++--\n' +
     ' arch/s390/kvm/kvm-s390.c       | 123 ++++++++++++-------\n' +
     ' include/uapi/linux/kvm.h        |  12 ++\n' +
-    ' drivers/s390/cio/device.c       |   8 ----\n' +
-    ' arch/s390/boot/reipl.c          |  31 ++---';
+    ' arch/s390/mm/pgtable.c          |  18 ---\n' +
+    ' arch/s390/kernel/reipl.c        |  34 ++++--';
   document.getElementById('git-patch').value =
     'diff --git a/include/uapi/linux/kvm.h b/include/uapi/linux/kvm.h\n' +
     '+#define KVM_S390_MEMOP_F_INJECT_EXCEPTION (1ULL << 1)  /* NEW id 0x3a */\n\n' +
-    'diff --git a/drivers/s390/cio/device.c b/drivers/s390/cio/device.c\n' +
-    '-static DEVICE_ATTR_RO(pim);\n' +
-    '-static DEVICE_ATTR_RO(pam);\n' +
-    '+/* pim/pam removed: use chpid attributes instead */';
+    'diff --git a/arch/s390/kvm/intercept.c b/arch/s390/kvm/intercept.c\n' +
+    '+       case 0xb9af: return kvm_s390_handle_b9af(vcpu);';
   document.getElementById('git-env').value =
-    '# TODAY run #1566\ns390-tools-2.34.0   ← CHANGED from 2.33.0\nqemu-8.2.1\nkernel-5.15.0-20260714\n\n' +
-    '# YESTERDAY run #1565\ns390-tools-2.33.0\nqemu-8.2.1\nkernel-5.15.0-20260713';
+    '# TODAY run #1592 · 2026-08-09\n' +
+    's390-tools-2.34.0\nqemu-8.2.1\nkernel-7.2.0-20260809.rc6.git0.1c2c67f1a900.300.fc44.s390x\n\n' +
+    '# LAST PASSING run #1588 · 2026-08-05\ns390-tools-2.34.0\nqemu-8.2.1\nkernel-7.2.0-20260805.rc5.git2.300.fc44.s390x';
+
+  // KVM suite log snippets — run 1592 · 2026-08-09 · 5/9 FAIL (hades-monolithic + s390-tools are PASS)
+  var logs = {
+    'canton-prototype': [
+      'ci-error: test suite script failure',
+      'BUG: unable to handle page fault for address: 0000000000000000',
+      'RIP: kvm_s390_handle_sie+0x2a3/0x4c0 [kvm]',
+      'failed on: devel z17 LPAR b46lp66'
+    ].join('\n'),
+    'ci-reipl': [
+      'chreipl: open /sys/firmware/reipl/ccw/device: No such file or directory',
+      'zipl: error: unable to find re-IPL device'
+    ].join('\n'),
+    'hades': [
+      'ci-error: invalid tap',
+      'ci-error: ssh connection error',
+      'tests.test_se.AsyncTeardownRebootTestCase.runTest failed on: devel z16 LPAR a46lp23',
+      'tests.test_virtio_serial.VirtioSerialSocatHostToGuestPCITestCase.runTest failed on: git z17 KVM b46lp70kvm01'
+    ].join('\n'),
+    'hades-withHW': [
+      'ci-error: install test suite packages',
+      'tests.test_vfio_pci_iommufd.VfioPciIommufdRoceRebootTestCase.runTest failed on: debug z17 LPAR b46lp63',
+      'tests.test_vfio_pci_roce.VfioPciRoceRebootTestCase.runTest failed on: debug z17 LPAR b46lp63',
+      'tests.test_virtio_net_pci_roce.VirtioNetPciRoceIperfMTUTestCase.runTest failed on: debug/devel z17 LPAR b46lp63'
+    ].join('\n'),
+    'kvm-selftests': [
+      'ci-error: invalid tap',
+      'ci-error: ssh connection error',
+      'ci-error: test suite timeout',
+      'failed on: kasan z16 z/VM a8345044 kvm-selftests_kasan_a8345044.tap'
+    ].join('\n'),
+    'kvm-unit-tests-kvm': [
+      'ci-error: test suite timeout',
+      'firq-linear-cpu-ids-kvm_PV: timeout; duration=30',
+      'firq-nonlinear-cpu-ids-kvm_PV: timeout; duration=30',
+      'failed on: z16 z/VM a8345044 and z16/z17 LPAR multiple systems'
+    ].join('\n'),
+  };
+  Object.keys(logs).forEach(function(suite) {
+    var el = document.querySelector('.log-in[data-proj="kvm"][data-suite="' + suite + '"]');
+    if (el) el.value = logs[suite];
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────
 //  Run info sync
 // ─────────────────────────────────────────────────────────────────
+var _syncingRunFields = false;   // guard against mutual-recursion
+
 function syncRunBar() {
   var d  = document.getElementById('run-date').value;
-  var id = document.getElementById('run-id').value;
-  var u  = document.getElementById('run-url').value;
+  var id = document.getElementById('run-id').value.trim();
+  var u  = document.getElementById('run-url').value.trim();
+
+  // Keep run-url and run-id in sync (whichever was edited last wins)
+  if (!_syncingRunFields) {
+    _syncingRunFields = true;
+    var urlEl = document.getElementById('run-url');
+    var idEl  = document.getElementById('run-id');
+    var m = u.match(/\/ci-run\/(\d+)/);
+    if (m && m[1] !== id) {
+      // URL was typed: extract ID from URL
+      idEl.value = m[1];
+      id = m[1];
+    } else if (id && u) {
+      // ID was typed: update the numeric part in the URL
+      urlEl.value = u.replace(/\/ci-run\/\d+/, '/ci-run/' + id.replace(/^#/, ''));
+      u = urlEl.value;
+    } else if (id && !u) {
+      // No URL yet: generate it from ID
+      var base = 'https://lnxgwne1.boeblingen.de.ibm.com/linux-ci/webui/ci-run';
+      urlEl.value = base + '/' + id.replace(/^#/, '');
+      u = urlEl.value;
+    }
+    _syncingRunFields = false;
+  }
+
   document.getElementById('rb-date').textContent = d || '—';
   document.getElementById('rb-id').textContent   = id || '—';
   document.getElementById('run-badge').textContent = 'Run: ' + (id || '—');
   var aEl = document.getElementById('rb-url');
   aEl.href        = u || '#';
-  aEl.textContent = (id || '—') + ' ↗';
+  aEl.textContent = (id ? id.replace(/^#/,'') : '—') + ' ↗';
+  // Update log path: derive from date (strip dashes for the directory name)
+  var logEl = document.getElementById('rb-logpath');
+  if (logEl && d) logEl.textContent = '/home/ciuser/logs/daily/' + d.replace(/-/g,'') + '/';
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  CI Mail ingest
+// ─────────────────────────────────────────────────────────────────
+function ingestMail() {
+  var text = document.getElementById('ingest-text').value.trim();
+  if (!text) { setStatus('ingest-status', 'err', 'Paste a CI mail first.'); return; }
+  setStatus('ingest-status', 'info', 'Parsing…');
+
+  fetch('/api/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mail_text: text })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(r) {
+    if (!r.ok) { setStatus('ingest-status', 'err', r.error || 'Parse failed'); return; }
+
+    // ── Populate run metadata ──────────────────────────────────
+    if (r.run_date) {
+      var dateEl = document.getElementById('run-date');
+      if (dateEl) dateEl.value = r.run_date;
+    }
+    if (r.run_id) {
+      var idEl = document.getElementById('run-id');
+      if (idEl) idEl.value = r.run_id;
+    }
+    if (r.web_url) {
+      var urlEl = document.getElementById('run-url');
+      if (urlEl) urlEl.value = r.web_url;
+    }
+    syncRunBar();
+
+    // ── Populate suite log textareas ──────────────────────────
+    var filled = 0;
+    Object.keys(r.suite_logs || {}).forEach(function(suite) {
+      var el = document.querySelector('.log-in[data-suite="' + suite + '"]');
+      if (el) { el.value = r.suite_logs[suite]; filled++; }
+    });
+
+    // ── Update suite status badges + grey PASS log areas ─────
+    Object.keys(r.suite_status || {}).forEach(function(suite) {
+      var row = document.querySelector('.log-in[data-suite="' + suite + '"]');
+      if (!row) return;
+      var tr = row.closest('tr');
+      if (!tr) return;
+      var statusTd = tr.querySelectorAll('td')[2];
+      if (!statusTd) return;
+      var isFail = r.suite_status[suite] === 'FAIL';
+      statusTd.className = isFail ? 'st-fail' : 'st-pass';
+      statusTd.textContent = isFail ? 'FAIL' : 'PASS';
+      // Grey out log textarea for PASS rows so it's clear the content is informational only
+      row.style.color = isFail ? '' : '#57606a';
+    });
+
+    // ── Populate env/pkgs tab with kernel key ─────────────────
+    var kernelKey = r.kernel_key || {};
+    if (Object.keys(kernelKey).length) {
+      var envLines = ['# Kernel builds — run ' + (r.run_id || '') + ' · ' + (r.run_date || '')];
+      Object.keys(kernelKey).sort().forEach(function(k) {
+        var kk = kernelKey[k];
+        envLines.push(k + ': kernel-' + kk.name + ' (' + kk.build + ')');
+      });
+      var envEl = document.getElementById('git-env');
+      if (envEl) envEl.value = envLines.join('\n');
+    }
+
+    // ── Update failing suites counter ─────────────────────────
+    var failCount = Object.keys(r.suite_status || {}).filter(function(s) {
+      return r.suite_status[s] === 'FAIL';
+    }).length;
+    var totalCount = Object.keys(r.suite_status || {}).length || 16;
+    var ctr = document.getElementById('rb-fail-count');
+    if (ctr && failCount) ctr.textContent = failCount + ' / ' + totalCount;
+
+    // ── Clear stale analysis results ──────────────────────────
+    ['kvm','qemu','libvirt'].forEach(function(p) {
+      setBody(p + '-body',
+        'Mail ingested — click <em>⚙ Local Analysis</em> or <em>⚡ Analyse All</em>.',
+        'empty');
+      document.getElementById(p + '-tok').style.display = 'none';
+      delete analysisCache[p];
+    });
+    setCorr('Mail ingested. Run per-project analyses then click <em>Correlate</em>.', 'empty');
+    window.deltaReady = true;
+
+    // ── Build status message ──────────────────────────────────
+    var dumpCount = (r.dumps || []).length;
+    var msg = '✓ Loaded ' + filled + ' suite log(s)';
+    if (r.run_date)  msg += ' · ' + r.run_date;
+    if (r.run_id)    msg += ' · run #' + r.run_id;
+    if (failCount)   msg += ' · ' + failCount + ' FAIL';
+    if (dumpCount)   msg += ' · ' + dumpCount + ' crash dump(s)';
+    setStatus('ingest-status', 'ok', msg);
+    setStatus('run-status',    'ok', msg);
+  })
+  .catch(function(e) { setStatus('ingest-status', 'err', e.message); });
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Export HTML report
+// ─────────────────────────────────────────────────────────────────
+function exportReport() {
+  var btn = document.getElementById('btn-export-report');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating…';
+
+  var run  = runInfo();
+  var allLogs = { kvm: collectLogs('kvm'), qemu: collectLogs('qemu'), libvirt: collectLogs('libvirt') };
+  // Flatten project-keyed logs into a single suite-keyed dict
+  var flatLogs = {};
+  ['kvm','qemu','libvirt'].forEach(function(p) {
+    Object.keys(allLogs[p]).forEach(function(suite) { flatLogs[suite] = allLogs[p][suite]; });
+  });
+
+  var body = {
+    run_date:    run.run_date,
+    run_id:      run.run_id,
+    delta:       delta(),
+    suite_logs:  flatLogs,
+    suite_status: collectSuiteStatus(),
+    mail_text:   document.getElementById('ingest-text').value.trim()
+  };
+
+  fetch('/api/report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  .then(function(r) {
+    if (!r.ok) return r.json().then(function(j) { throw new Error(j.error || 'Report failed'); });
+    return r.blob();
+  })
+  .then(function(blob) {
+    var url  = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'ciiq-run-' + run.run_id + '-root-cause-report.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setStatus('run-status', 'ok', '✓ Report downloaded: ciiq-run-' + run.run_id + '-root-cause-report.html');
+  })
+  .catch(function(e) {
+    setStatus('run-status', 'err', 'Report error: ' + e.message);
+  })
+  .finally(function() {
+    btn.disabled = false;
+    btn.textContent = '⬇ Export Report';
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -852,9 +1344,16 @@ document.getElementById('btn-kvm').addEventListener('click',     function() { an
 document.getElementById('btn-qemu').addEventListener('click',    function() { analyse('qemu'); });
 document.getElementById('btn-libvirt').addEventListener('click', function() { analyse('libvirt'); });
 document.getElementById('btn-analyse-all').addEventListener('click', analyseAll);
+document.getElementById('btn-analyse-local').addEventListener('click', analyseLocal);
 document.getElementById('btn-correlate').addEventListener('click', correlate);
 document.getElementById('btn-load-example').addEventListener('click', loadExample);
 document.getElementById('btn-load-run').addEventListener('click', loadRunLogs);
+document.getElementById('btn-ingest').addEventListener('click', ingestMail);
+document.getElementById('btn-export-report').addEventListener('click', exportReport);
+document.getElementById('btn-ingest-clear').addEventListener('click', function() {
+  document.getElementById('ingest-text').value = '';
+  document.getElementById('ingest-status').className = 'status';
+});
 
 document.getElementById('btn-clear-kvm').addEventListener('click',     function() { setBody('kvm-body',     'Cleared.', 'empty'); document.getElementById('kvm-tok').style.display='none'; delete analysisCache.kvm; });
 document.getElementById('btn-clear-qemu').addEventListener('click',    function() { setBody('qemu-body',    'Cleared.', 'empty'); document.getElementById('qemu-tok').style.display='none'; delete analysisCache.qemu; });
@@ -904,25 +1403,839 @@ document.querySelectorAll('.proj-tab').forEach(function(t) {
 // ─────────────────────────────────────────────────────────────────
 (function init() {
   syncRunBar();
-  // Load config defaults from backend
-  fetch('/api/config').then(function(r) { return r.json(); }).then(function(r) {
-    if (!r.ok) return;
-    if (r.watsonx.region)     document.getElementById('wx-region').value = r.watsonx.region;
-    if (r.watsonx.model)      document.getElementById('wx-model').value  = r.watsonx.model;
-    if (r.watsonx.max_tokens) document.getElementById('wx-maxtok').value = r.watsonx.max_tokens;
-    // If server has credentials configured, show a tick without exposing them
-    if (r.watsonx.has_api_key && r.watsonx.has_project_id) {
+
+  // ── 1 + 2. Single config fetch: load WatsonX settings AND seed latest run ──
+  fetch('/api/config').then(function(r) { return r.json(); }).then(function(cfg) {
+    if (!cfg.ok) return;
+    var wx = cfg.watsonx || {};
+    var ci = cfg.ci || {};
+
+    // Sync WatsonX UI fields
+    if (wx.region) {
+      var regSel = document.getElementById('wx-region');
+      if (regSel) regSel.value = wx.region;
+    }
+    if (wx.model) {
+      var modSel = document.getElementById('wx-model');
+      if (modSel) {
+        var found = false;
+        for (var i = 0; i < modSel.options.length; i++) {
+          if (modSel.options[i].value === wx.model) { found = true; break; }
+        }
+        if (!found) {
+          var opt = document.createElement('option');
+          opt.value = wx.model; opt.textContent = wx.model.split('/').pop();
+          modSel.appendChild(opt);
+        }
+        modSel.value = wx.model;
+        if (modSel.value !== wx.model) modSel.selectedIndex = modSel.options.length - 1;
+      }
+    }
+    if (wx.max_tokens) {
+      var tokEl = document.getElementById('wx-maxtok');
+      if (tokEl) tokEl.value = wx.max_tokens;
+    }
+    if (wx.has_api_key && wx.has_project_id) {
       window.serverCreds = true;
       setStatus('conn-status', 'ok', '✓ Credentials loaded from server .env — ready');
       setConnDot('ok');
-      // Dim the credential inputs so users know they are pre-configured
       var keyEl  = document.getElementById('wx-key');
       var projEl = document.getElementById('wx-proj');
       if (keyEl)  { keyEl.placeholder  = '(configured in server .env)'; keyEl.disabled  = true; keyEl.style.opacity  = '0.45'; }
       if (projEl) { projEl.placeholder = '(configured in server .env)'; projEl.disabled = true; projEl.style.opacity = '0.45'; }
     }
+
+    // Seed latest run date
+    var runDate = ci.latest_run_date || '';
+    var runId   = ci.latest_run_id   || '';
+    var webui   = ci.webui_base      || '';
+    if (!runDate) {
+      // latest_run_date not in config — try /api/runs (SSH, cached server-side)
+      fetch('/api/runs').then(function(r) { return r.json(); }).then(function(r) {
+        if (r.ok && r.runs && r.runs.length) {
+          applyRunInfo(r.runs[0].date_fmt, '', webui);
+        } else {
+          // Off-VPN and no SSH: leave whatever the template has hardcoded, just sync the bar
+          syncRunBar();
+        }
+      }).catch(function() { syncRunBar(); });
+      return;
+    }
+    applyRunInfo(runDate, runId, webui);
   });
+
+  function applyRunInfo(date, id, webuiBase) {
+    var dateEl  = document.getElementById('run-date');
+    var idEl    = document.getElementById('run-id');
+    var urlEl   = document.getElementById('run-url');
+    if (dateEl) dateEl.value = date;
+    if (idEl && id)   idEl.value  = id;
+    if (urlEl && id && webuiBase) urlEl.value = webuiBase + '/' + id.replace(/^#/, '');
+    syncRunBar();
+    loadRunLogs();
+  }
 })();
+
+// ═══════════════════════════════════════════════════════════════════
+//  CIIQ OFFLINE ANALYSIS ENGINE
+//  Runs 100% in the browser — no Flask, no tuxmaker, no credentials.
+//  Input: raw CI daily mail text pasted into #ingest-text
+//  Output: structured HTML root-cause report rendered into #offline-out
+// ═══════════════════════════════════════════════════════════════════
+
+(function() {
+'use strict';
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function code(s) { return '<code>' + esc(s) + '</code>'; }
+
+function age_pill(d) {
+  if (d === 0)     return '<span style="background:#fee2e2;color:#b91c1c;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:700">0d NEW</span>';
+  if (d <= 7)      return '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:700">'+d+'d</span>';
+  if (d <= 30)     return '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;font-size:11px">'+d+'d</span>';
+  return '<span style="background:#fee2e2;color:#7f1d1d;padding:1px 6px;border-radius:3px;font-size:11px">'+d+'d</span>';
+}
+
+function verdict(age, kernelStr, text) {
+  var isCI = /ci-error/i.test(text);
+  if (isCI && age >= 80) return '<span style="color:#5b21b6">Infra — long-standing ('+age+'d)</span>';
+  if (isCI)              return '<span style="color:#7f1d1d">Infrastructure failure</span>';
+  var kCount = (kernelStr.replace(/\s/g,'').replace(/[^A-Za-z]/g,'')||'').length;
+  if (kCount >= 5 && age <= 10)
+    return '<span style="color:#991b1b;font-weight:700">⚠ Code regression — all kernels</span>';
+  if (age === 0)  return '<span style="color:#b91c1c;font-weight:700">New today — monitor</span>';
+  if (age <= 3)   return '<span style="color:#b91c1c;font-weight:700">New regression (≤3d)</span>';
+  if (age >= 90)  return '<span style="color:#57606a">Pre-existing (≥90d) — do not revert</span>';
+  if (age >= 30)  return '<span style="color:#92400e">Likely pre-existing (&gt;30d) — verify</span>';
+  return '<span style="color:#92400e">Recent ('+age+'d) — check delta</span>';
+}
+
+// ── Parse TAP annotation line ────────────────────────────────────
+// e.g. "[ED GK  kN][  6x   6d] tests.test_vfio..."
+var ANN_RE = /^\[([A-Za-z ]{0,20})\]\s*\[\s*(\d+)x\s*(\d+)d\]\s*(.*)/;
+function parseAnn(line) {
+  var m = ANN_RE.exec(line.trim());
+  if (!m) return null;
+  return { kernels: m[1], count: parseInt(m[2],10), age: parseInt(m[3],10), text: m[4].trim() };
+}
+
+// ── Parse full CI mail ───────────────────────────────────────────
+function parseMail(raw) {
+  var result = {
+    run_date:'', run_id:'', web_url:'', log_path:'',
+    kernel_key:{}, suite_failures:{}, suite_status:{},
+    dumps:[], fixed:[], systems:[],
+    combined_stats:{}
+  };
+
+  // metadata
+  var m;
+  m = /Daily run:\s*(\d{4}-\d{2}-\d{2})/.exec(raw);
+  if (m) result.run_date = m[1];
+  m = /Web UI:\s*(https?:\/\/\S+)/.exec(raw);
+  if (m) { result.web_url = m[1].replace(/\)+$/,''); m=/\/ci-run\/(\d+)/.exec(result.web_url); if(m) result.run_id=m[1]; }
+  m = /Full log:\s*(\S+)/.exec(raw);
+  if (m) result.log_path = m[1];
+
+  // kernel key
+  var kre = /^([A-Za-z]):\s+kernel-(\S+)\s+\(([^)]+)\)/mg;
+  while ((m = kre.exec(raw)) !== null)
+    result.kernel_key[m[1]] = { name:m[2], build:m[3] };
+
+  // combined test results table
+  var statRe = /^([a-z][a-zA-Z0-9._-]+)\s+(\d+\/\d+)\s+(\d+)\s+(\S+)\s+(\S+)/mg;
+  while ((m = statRe.exec(raw)) !== null) {
+    var suite=m[1], fail=m[5];
+    if (/^(SUITE|TOTAL)/.test(suite)) continue;
+    result.combined_stats[suite] = { runs:m[2], tests:m[3], pass:m[4], fail:fail };
+    result.suite_status[suite] = (fail !== '-' && fail !== '0' && /^\d+$/.test(fail) && parseInt(fail,10)>0) ? 'FAIL' : 'PASS';
+  }
+
+  // per-suite failure sections
+  var secRe = /^Test failures for test suite '([^']+)'\s*\n=+\n([\s\S]*?)(?=^Test failures for|^Fixed test|^Dumps of|^Test systems|^Combined|^--\s*$|^Note:|^[A-Za-z]: kernel-|\Z)/gm;
+  while ((m = secRe.exec(raw)) !== null) {
+    var sname = m[1], body = m[2].trim();
+    if (body) { result.suite_failures[sname] = body; result.suite_status[sname] = 'FAIL'; }
+  }
+
+  // crash dumps
+  var inDumps = false;
+  raw.split('\n').forEach(function(line) {
+    if (/^Dumps of unresponsive/.test(line)) { inDumps=true; return; }
+    if (inDumps && /^(Fixed|Test systems|Parse|Combined|^--)/.test(line)) inDumps=false;
+    if (!inDumps) return;
+    var p = line.trim().split(/\s+/);
+    if (p.length>=6 && /^\d+$/.test(p[0]))
+      result.dumps.push({nr:p[0],suite:p[1],kernel:p[2],model:p[3],type:p[4],system:p[5],dump:p[6]||'',reason:p.slice(10).join(' ')});
+  });
+
+  // fixed test cases — names may wrap across two lines, e.g.:
+  //   1  hades  tests...FileBackedVirtiofsCCWTestCa  69/73  21  0  48  20260810 (6d)  -
+  //              se.runTest
+  // Strategy: for each continuation line (large indent) splice the suffix back into the
+  // test-name token of the previous row — before the RUNS column — not at the row end.
+  var fixedSection = '';
+  var inFixed = false;
+  raw.split('\n').forEach(function(line) {
+    if (/^Fixed test cases/.test(line)) { inFixed = true; return; }
+    if (inFixed && /^(Parse errors|Test systems|--\s*$)/.test(line)) inFixed = false;
+    if (!inFixed) return;
+    fixedSection += line + '\n';
+  });
+  // Join continuation lines: splice suffix into the partial test name before the RUNS column
+  var fixLines = fixedSection.split('\n');
+  var fixJoined = [];
+  for (var fi = 0; fi < fixLines.length; fi++) {
+    var fl = fixLines[fi], fn = fixLines[fi+1] || '';
+    if (/^\s{10,}\S/.test(fn)) {
+      var suffix = fn.trim();
+      // Insert suffix into the partial test token that precedes the RUNS (d+/d+) column
+      fl = fl.replace(/(\S+)(\s+\d+\/\d+)/, function(_, tok, rest) { return tok + suffix + rest; });
+      fi++; // consumed continuation
+    }
+    fixJoined.push(fl);
+  }
+  fixedSection = fixJoined.join('\n');
+  var fixRe = /^\s*(\d+)\s+(\S+)\s+(\S+\.runTest)\s+(\d+\/\d+)\s+(\S+)\s+(\S+)\s+(\d+)\s+(\S+)/mg;
+  var fm;
+  while ((fm = fixRe.exec(fixedSection)) !== null)
+    result.fixed.push({nr:fm[1],suite:fm[2],test:fm[3],runs:fm[4],skip:fm[5],pass:fm[6],fixed:fm[7],last:fm[8]});
+
+  // test systems — parse only the Test systems section to avoid false matches.
+  // Runtime column may be "-" (dead node) or multi-word "3h 24m 50s".
+  // Pattern: NR  SYSTEM  CPUS  MEMORY(X GiB)  MODEL  TYPE  RUNTIME  SUITES  DUMPS
+  var inSystems = false;
+  raw.split('\n').forEach(function(line) {
+    if (/^Test systems/.test(line)) { inSystems = true; return; }
+    if (inSystems && /^(-{2,}|To unsubscribe)/.test(line)) inSystems = false;
+    if (!inSystems) return;
+    // Match: leading spaces, NR, SYSTEM, CPUS, "N GiB", MODEL, TYPE, then SUITES as \d+/\d+
+    var sm = /^\s*(\d+)\s+([\w.]+)\s+(\d+)\s+([\d.]+ GiB)\s+(\w+)\s+([\w\/]+)\s+(.*?)\s+(\d+\/\d+)\s/.exec(line);
+    if (!sm) return;
+    result.systems.push({
+      nr:sm[1], system:sm[2], cpus:sm[3], mem:sm[4],
+      model:sm[5], type:sm[6], runtime:sm[7].trim(), suites:sm[8]
+    });
+  });
+
+  return result;
+}
+
+// ── Rule engine ──────────────────────────────────────────────────
+
+function classifyFailures(parsed) {
+  // Returns: { code_regressions, node_faults, infra_issues, new_today, pre_existing }
+  var code_regressions = [], node_faults = [], infra_issues = [], new_today = [], pre_existing = [];
+
+  // Group by node: if same test fails across ALL kernels on same node → node fault
+  var nodeFailCounts = {}; // node -> { total_kernels, suites_set }
+  var KNOWN_KERNELS = 6;
+
+  Object.keys(parsed.suite_failures).forEach(function(suite) {
+    var body = parsed.suite_failures[suite];
+    body.split('\n').forEach(function(line) {
+      var ann = parseAnn(line);
+      if (!ann) return;
+      var kCount = (ann.kernels.replace(/\s/g,'').replace(/[^A-Za-z]/g,'')||'').length;
+
+      // Extract node names from the failure list beneath
+      // Pattern: "failed on: KERNEL MODEL TYPE SYSTEM FILENAME" lines
+      var nodeRe = /LPAR\s+(\w+)|z\/VM\s+(\w+)|KVM\s+(\w+)/g;
+      var nodeM, nodes = [];
+      while ((nodeM = nodeRe.exec(line)) !== null)
+        nodes.push(nodeM[1]||nodeM[2]||nodeM[3]);
+
+      if (ann.age === 0) {
+        new_today.push({ suite:suite, text:ann.text, kernels:ann.kernels, count:ann.count });
+      }
+      if (kCount >= 5 && ann.age <= 14 && !(/ci-error/i.test(ann.text))) {
+        code_regressions.push({ suite:suite, text:ann.text, kernels:ann.kernels, age:ann.age, count:ann.count });
+      }
+      if (ann.age >= 90) {
+        pre_existing.push({ suite:suite, text:ann.text, age:ann.age });
+      }
+      if (/ci-error/i.test(ann.text) && !(/timeout/i.test(ann.text))) {
+        infra_issues.push({ suite:suite, text:ann.text, age:ann.age });
+      }
+    });
+  });
+
+  // Node fault detection: look for systems with very high runtimes or 0-suite completions
+  var dead_nodes = [], degrading_nodes = [];
+  parsed.systems.forEach(function(s) {
+    var parts = s.suites.split('/');
+    var done = parseInt(parts[0],10), total = parseInt(parts[1],10);
+    if (done === 0 && total > 0) dead_nodes.push(s);
+    // b46lp63 heuristic: 7h+ runtime and has dump
+    if (s.runtime && /^[5-9]\d|[1-9]\d\d/.test(s.runtime) && /LPAR/.test(s.type||''))
+      degrading_nodes.push(s);
+  });
+
+  // All-kernel pattern per suite: if a suite has >20 failures all same node, flag node fault
+  Object.keys(parsed.suite_failures).forEach(function(suite) {
+    var body = parsed.suite_failures[suite];
+    var allKernelLines = body.split('\n').filter(function(l) {
+      var a = parseAnn(l);
+      return a && (a.kernels.replace(/\s/g,'').replace(/[^A-Za-z]/g,'')||'').length >= 5;
+    });
+    if (allKernelLines.length >= 5)
+      node_faults.push({ suite:suite, count:allKernelLines.length });
+  });
+
+  return { code_regressions:code_regressions, node_faults:node_faults,
+           infra_issues:infra_issues, new_today:new_today,
+           pre_existing:pre_existing, dead_nodes:dead_nodes, degrading_nodes:degrading_nodes };
+}
+
+// ── Render HTML report ───────────────────────────────────────────
+
+function renderReport(parsed, mailText) {
+  var cf = classifyFailures(parsed);
+  var H = [];
+
+  // ── topbar ──────────────────────────────────────────────────
+  var failCount = Object.keys(parsed.suite_status).filter(function(s){return parsed.suite_status[s]==='FAIL';}).length;
+  var totalCount = Object.keys(parsed.suite_status).length;
+
+  H.push(
+    '<div id="offline-report-topbar" style="background:#1e3a5f;color:#fff;padding:10px 16px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+    '<span style="background:#3b82d4;font-size:12px;font-weight:800;padding:3px 10px;border-radius:5px;letter-spacing:.06em">CIIQ</span>' +
+    '<span style="font-size:13px;font-weight:700;color:#e2e8f0">Offline Root-Cause Analysis</span>' +
+    '<span style="flex:1"></span>' +
+    (parsed.run_id ? '<span style="background:#1e40af;border:1px solid #3b82d4;border-radius:5px;padding:2px 9px;font-size:12px;color:#bfdbfe">Run '+esc(parsed.run_id)+' &middot; '+esc(parsed.run_date)+'</span>' : '') +
+    (failCount ? '<span style="background:#7f1d1d;border:1px solid #f87171;border-radius:5px;padding:2px 9px;font-size:12px;color:#fca5a5;font-weight:700">'+failCount+'/'+totalCount+' FAIL</span>' : '') +
+    '<span style="background:#064e3b;border:1px solid #34d399;border-radius:5px;padding:2px 8px;font-size:11px;color:#a7f3d0;font-weight:700">⚡ browser-only</span>' +
+    '<button onclick="offlinePrintReport()" title="Print / Save as PDF" style="background:#1e40af;border:1px solid #3b82d4;border-radius:5px;padding:3px 10px;font-size:12px;color:#bfdbfe;cursor:pointer;font-family:inherit;font-weight:600">🖨 Print</button>' +
+    '<button onclick="offlineToggleMinimise(this)" title="Minimise report" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:5px;padding:3px 9px;font-size:13px;color:#e2e8f0;cursor:pointer;font-family:inherit;font-weight:700;line-height:1" data-minimised="0">−</button>' +
+    '</div>'
+  );
+
+  // ── meta ────────────────────────────────────────────────────
+  H.push('<div style="background:#f7f8fa;border:1px solid #e5e7eb;border-top:none;padding:9px 14px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px">');
+  if (parsed.run_date) H.push('<div><div style="color:#57606a;font-size:10px;text-transform:uppercase;font-weight:700">Date</div><div style="font-family:monospace;font-weight:600">'+esc(parsed.run_date)+'</div></div>');
+  if (parsed.run_id)   H.push('<div><div style="color:#57606a;font-size:10px;text-transform:uppercase;font-weight:700">Run ID</div><div style="font-family:monospace;font-weight:600">'+esc(parsed.run_id)+'</div></div>');
+  if (parsed.log_path) H.push('<div><div style="color:#57606a;font-size:10px;text-transform:uppercase;font-weight:700">Log Path</div><div style="font-family:monospace;font-weight:600">'+esc(parsed.log_path)+'</div></div>');
+  if (parsed.web_url)  H.push('<div><div style="color:#57606a;font-size:10px;text-transform:uppercase;font-weight:700">Web UI</div><div style="font-family:monospace;font-weight:600"><a href="'+esc(parsed.web_url)+'" target="_blank" style="color:#3b82d4">'+esc(parsed.run_id||'link')+' ↗</a></div></div>');
+  H.push('</div>');
+
+  function section(n, title, newTag) {
+    return '<div style="font-size:13px;font-weight:700;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid #e5e7eb;display:flex;align-items:center;gap:8px">'
+      + '<span style="background:#1e3a5f;color:#93c5fd;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px">'+n+'</span>'
+      + esc(title)
+      + (newTag ? ' <span style="background:#064e3b;color:#a7f3d0;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;border:1px solid #34d399">NEW</span>' : '')
+      + '</div>';
+  }
+
+  var wrapper = '<div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;padding:14px 16px;background:#fff">';
+  H.push(wrapper);
+
+  // ── §0 run summary ──────────────────────────────────────────
+  H.push(section(0, 'Run Summary'));
+  if (Object.keys(parsed.suite_status).length) {
+    H.push('<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">');
+    H.push('<thead><tr><th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb;text-align:left">Suite</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb;text-align:left">Status</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb;text-align:left">Runs</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb;text-align:left">Fail</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb;text-align:left">First failure line</th>'
+      +'</tr></thead><tbody>');
+    var si=0;
+    Object.keys(parsed.suite_status).sort().forEach(function(suite) {
+      var status = parsed.suite_status[suite];
+      var cls = status==='FAIL' ? 'color:#991b1b;font-weight:700' : 'color:#166534;font-weight:600';
+      var stats = parsed.combined_stats[suite]||{};
+      var firstLine = '';
+      if (status==='FAIL' && parsed.suite_failures[suite]) {
+        var lines = parsed.suite_failures[suite].split('\n').filter(function(l){return l.trim();});
+        firstLine = lines[0]||'';
+        var a=parseAnn(firstLine); if(a) firstLine=a.text;
+        if (firstLine.length>80) firstLine=firstLine.slice(0,80)+'…';
+      }
+      var bg = (si%2===0)?'':'background:#fafafa';
+      H.push('<tr style="'+bg+'"><td style="padding:4px 8px;border:1px solid #e5e7eb">'+code(suite)+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb;'+cls+'">'+esc(status)+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-family:monospace;font-size:11px">'+esc(stats.runs||'—')+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-family:monospace;font-size:11px">'+esc(stats.fail||'—')+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;color:#57606a">'+esc(firstLine)+'</td>'
+        +'</tr>');
+      si++;
+    });
+    H.push('</tbody></table>');
+  }
+
+  // kernel key
+  if (Object.keys(parsed.kernel_key).length) {
+    H.push('<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">');
+    Object.keys(parsed.kernel_key).sort().forEach(function(k) {
+      var kk = parsed.kernel_key[k];
+      H.push('<span style="font-family:monospace;font-size:11px;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:3px 8px;color:#e6edf3">'
+        +'<span style="color:#79c0ff;font-weight:700">'+esc(k)+'</span>'
+        +' '+esc(kk.name)+' <span style="color:#8b949e;font-size:10px">'+esc(kk.build.split('.').slice(0,2).join('.'))+'…</span></span>');
+    });
+    H.push('</div>');
+  }
+
+  // ── §1 system dumps ─────────────────────────────────────────
+  if (parsed.dumps.length) {
+    H.push(section(1, 'System Dumps'));
+    H.push('<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">');
+    H.push('<thead><tr>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">#</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Suite</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Kernel</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">System</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Dump</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Reason</th>'
+      +'</tr></thead><tbody>');
+    parsed.dumps.forEach(function(d,i) {
+      var bg = i%2?'':'background:#fafafa';
+      H.push('<tr style="'+bg+'">'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-weight:700;color:#f87149;text-align:center">'+esc(d.nr)+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb">'+code(d.suite)+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb">'+code(d.kernel)+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb">'+code(d.system)+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb">'+(d.dump&&d.dump!=='—'?code(d.dump):'<em>—</em>')+'</td>'
+        +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-size:11px">'+esc(d.reason)+'</td>'
+        +'</tr>');
+    });
+    H.push('</tbody></table>');
+  }
+
+  // ── §2 per-suite failures with age-based verdicts ───────────
+  H.push(section(2, 'Root Cause — Per Suite'));
+  var failSuites = Object.keys(parsed.suite_failures);
+  if (!failSuites.length) {
+    H.push('<p style="color:#57606a;font-size:13px">No suite failure sections found in the mail text.</p>');
+  } else {
+    failSuites.forEach(function(suite) {
+      H.push('<h3 style="font-size:13px;font-weight:700;margin:14px 0 5px">'+code(suite)+'</h3>');
+      H.push('<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-bottom:6px">');
+      var body = parsed.suite_failures[suite];
+      var annLines=[], plainLines=[];
+      body.split('\n').forEach(function(l) {
+        if (!l.trim()) return;
+        var a = parseAnn(l);
+        if (a) annLines.push(a);
+        else   plainLines.push(l.trim());
+      });
+
+      if (annLines.length) {
+        H.push('<table style="width:100%;border-collapse:collapse;font-size:11.5px"><thead>'
+          +'<tr><th style="background:#fef9c3;padding:4px 7px;border:1px solid #fde68a;text-align:left">Failure</th>'
+          +'<th style="background:#fef9c3;padding:4px 7px;border:1px solid #fde68a;text-align:left">Kernels</th>'
+          +'<th style="background:#fef9c3;padding:4px 7px;border:1px solid #fde68a">Count</th>'
+          +'<th style="background:#fef9c3;padding:4px 7px;border:1px solid #fde68a">Age</th>'
+          +'<th style="background:#fef9c3;padding:4px 7px;border:1px solid #fde68a;text-align:left">Verdict</th>'
+          +'</tr></thead><tbody>');
+        annLines.forEach(function(a,i) {
+          var bg = i%2?'':'background:#fefce8';
+          H.push('<tr style="'+bg+'">'
+            +'<td style="padding:3px 7px;border:1px solid #fde68a;font-family:monospace;font-size:11px;max-width:320px;word-break:break-all">'+esc(a.text)+'</td>'
+            +'<td style="padding:3px 7px;border:1px solid #fde68a"><span style="font-family:monospace;font-size:10px;background:#161b22;color:#79c0ff;padding:1px 5px;border-radius:3px">'+esc(a.kernels.trim()||'—')+'</span></td>'
+            +'<td style="padding:3px 7px;border:1px solid #fde68a;text-align:center;font-family:monospace">'+a.count+'×</td>'
+            +'<td style="padding:3px 7px;border:1px solid #fde68a;text-align:right">'+age_pill(a.age)+'</td>'
+            +'<td style="padding:3px 7px;border:1px solid #fde68a;font-size:11px">'+verdict(a.age,a.kernels,a.text)+'</td>'
+            +'</tr>');
+        });
+        H.push('</tbody></table>');
+      } else {
+        plainLines.slice(0,5).forEach(function(l) {
+          H.push('<div style="font-family:monospace;font-size:11.5px;padding:2px 0">'+esc(l.slice(0,120))+'</div>');
+        });
+      }
+      H.push('</div>');
+    });
+  }
+
+  // ── §3 node health ───────────────────────────────────────────
+  H.push(section(3, 'Node Health & Infrastructure', true));
+
+  // Dead nodes
+  var dead = parsed.systems.filter(function(s){
+    var p=s.suites.split('/'); return parseInt(p[0],10)===0 && parseInt(p[1],10)>0;
+  });
+  if (dead.length) {
+    H.push('<div style="background:#fff0f0;border:1px solid #fca5a5;border-radius:5px;padding:8px 12px;font-size:12px;margin-bottom:8px">');
+    H.push('<strong style="color:#7f1d1d">'+dead.length+' system(s) completed 0 suites:</strong><br>');
+    dead.forEach(function(s){
+      H.push('<span style="font-family:monospace;font-size:11px;background:#fee2e2;border:1px solid #fca5a5;border-radius:3px;padding:2px 7px;margin:2px;display:inline-block;color:#7f1d1d">'+esc(s.system)+' ('+esc(s.model)+' '+esc(s.type)+', '+esc(s.suites)+' suites)</span>');
+    });
+    H.push('</div>');
+  }
+
+  // Degrading nodes from all-kernel pattern
+  if (cf.node_faults.length) {
+    H.push('<div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:5px;padding:8px 12px;font-size:12px;margin-bottom:8px">');
+    H.push('<strong style="color:#5b21b6">All-kernel failure cluster detected (likely node fault, not code regression):</strong><br>');
+    cf.node_faults.forEach(function(nf){
+      H.push('<div style="margin-top:4px">'+code(nf.suite)+': <span style="color:#5b21b6">'+nf.count+' failures across all kernels</span> — consider quarantining the test node</div>');
+    });
+    H.push('</div>');
+  }
+
+  if (!dead.length && !cf.node_faults.length) {
+    H.push('<p style="color:#57606a;font-size:12px">No dead nodes or all-kernel failure clusters detected.</p>');
+  }
+
+  // ── §4 age-based classification ──────────────────────────────
+  H.push(section(4, 'Failure Classification by Age', true));
+  H.push('<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">');
+  H.push('<thead><tr>'
+    +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Category</th>'
+    +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Count</th>'
+    +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Details</th>'
+    +'</tr></thead><tbody>');
+  var cats = [
+    { label:'New today (0d)', items:cf.new_today, color:'#b91c1c' },
+    { label:'Code regression (all kernels, ≤14d)', items:cf.code_regressions, color:'#991b1b' },
+    { label:'Pre-existing (≥90d)', items:cf.pre_existing, color:'#57606a' },
+    { label:'Infrastructure errors', items:cf.infra_issues, color:'#5b21b6' },
+  ];
+  cats.forEach(function(cat,i) {
+    if (!cat.items.length) return;
+    var bg = i%2?'':'background:#fafafa';
+    var detail = cat.items.slice(0,3).map(function(x){ return esc(x.text||''); }).join('; ');
+    H.push('<tr style="'+bg+'">'
+      +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-weight:600;color:'+cat.color+'">'+esc(cat.label)+'</td>'
+      +'<td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:center;font-weight:700;color:'+cat.color+'">'+cat.items.length+'</td>'
+      +'<td style="padding:4px 8px;border:1px solid #e5e7eb;font-size:11px;color:#57606a;word-break:break-all">'+detail+'</td>'
+      +'</tr>');
+  });
+  H.push('</tbody></table>');
+
+  // ── §5 fixed test cases ──────────────────────────────────────
+  H.push(section(5, 'Fixed Test Cases Since Last Run', true));
+  if (parsed.fixed.length) {
+    H.push('<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:8px 12px;font-size:12px;margin-bottom:8px">');
+    H.push('<strong style="color:#166534">'+parsed.fixed.length+' test case(s) resolved:</strong>');
+    parsed.fixed.forEach(function(f,i) {
+      H.push('<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #e5e7eb">');
+      H.push('<div style="background:#1e3a5f;color:#93c5fd;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+f.nr+'</div>');
+      H.push('<div><span style="font-size:10px;background:#f7f8fa;border:1px solid #e5e7eb;border-radius:3px;padding:1px 5px;color:#57606a;margin-right:5px">'+esc(f.suite)+'</span>');
+      H.push(code(f.test)+'<br><span style="font-size:11px;color:#57606a">Last failed: '+esc(f.last)+' · '+esc(f.fixed)+' runs now fixed</span></div>');
+      H.push('</div>');
+    });
+    H.push('</div>');
+  } else {
+    H.push('<p style="color:#57606a;font-size:12px">No fixed test cases found in this mail. Check if the "Fixed test cases" section is present.</p>');
+  }
+
+  // ── §6 recommendations ───────────────────────────────────────
+  H.push(section(6, 'Recommendations'));
+
+  // Build priority-ordered recommendation list
+  var recs = [];
+
+  // Dead nodes → infrastructure action
+  dead.forEach(function(s) {
+    recs.push({ p:'🔴', action:'Investigate dead node '+s.system, reason:s.model+' '+s.type+' — 0/'+s.suites.split('/')[1]+' suites completed. Check power, hypervisor allocation, and network connectivity.' });
+  });
+
+  // All-kernel fault nodes
+  cf.node_faults.forEach(function(nf) {
+    recs.push({ p:'🔴', action:'Quarantine node(s) causing all-kernel failures in '+nf.suite, reason:nf.count+' tests fail across all kernels. Cross-kernel uniformity indicates hardware/hypervisor fault, not a code regression. Remove from CI pool and inspect.' });
+  });
+
+  // Code regressions
+  var codeRegSuites = {};
+  cf.code_regressions.forEach(function(r){codeRegSuites[r.suite]=true;});
+  Object.keys(codeRegSuites).forEach(function(suite) {
+    recs.push({ p:'🔴', action:'Bisect new code regression in '+suite, reason:'Failures span all kernels (≤14d old). Likely a commit introduced in this build. Check git log for the affected subsystem.' });
+  });
+
+  // New-today single-node failures
+  var newSuites = {};
+  cf.new_today.forEach(function(r){newSuites[r.suite]=true;});
+  Object.keys(newSuites).forEach(function(suite) {
+    var newItems = cf.new_today.filter(function(r){return r.suite===suite;});
+    var allNew = newItems.every(function(r){return r.count===1;});
+    if (allNew)
+      recs.push({ p:'🟡', action:'Monitor new 0d failures in '+suite+' ('+newItems.length+' test'+(newItems.length>1?'s)':')'), reason:'Each on a different node/kernel. Likely intermittent. Monitor next run before filing a bug.' });
+    else
+      recs.push({ p:'🔴', action:'Investigate new 0d failures in '+suite, reason:newItems.length+' test(s) first appeared today with multiple occurrences. Escalate if they recur.' });
+  });
+
+  // Pre-existing long-standing infra
+  var preInfraSuites = {};
+  cf.infra_issues.filter(function(r){return r.age>=90;}).forEach(function(r){preInfraSuites[r.suite]=true;});
+  Object.keys(preInfraSuites).forEach(function(suite) {
+    recs.push({ p:'🟢', action:'Address long-standing infra debt in '+suite, reason:'SSH/tap errors ≥90d old. Not a code regression. Schedule maintenance window for affected nodes.' });
+  });
+
+  // Fixed tests action
+  if (parsed.fixed.length) {
+    var closeable = parsed.fixed.filter(function(f){ return parseInt(f.last.replace(/\D/g,''),10) <= 20; });
+    if (closeable.length)
+      recs.push({ p:'🟢', action:'Close '+closeable.length+' resolved Monday.com item(s)', reason:closeable.map(function(f){return f.test.split('.').pop();}).join(', ')+' — last failed >6d ago, now consistently passing.' });
+  }
+
+  if (recs.length) {
+    H.push('<table style="width:100%;border-collapse:collapse;font-size:12px">');
+    H.push('<thead><tr>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb;width:24px">P</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Action</th>'
+      +'<th style="background:#f7f8fa;padding:5px 8px;border:1px solid #e5e7eb">Rationale</th>'
+      +'</tr></thead><tbody>');
+    recs.forEach(function(r,i) {
+      var bg = i%2?'':'background:#fafafa';
+      H.push('<tr style="'+bg+'">'
+        +'<td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:16px;text-align:center">'+r.p+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid #e5e7eb;font-weight:600">'+esc(r.action)+'</td>'
+        +'<td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:12px;color:#57606a">'+esc(r.reason)+'</td>'
+        +'</tr>');
+    });
+    H.push('</tbody></table>');
+  } else {
+    H.push('<p style="color:#57606a;font-size:12px">No specific recommendations generated — provide the full CI mail text including "Combined test results", "Test systems", and "Fixed test cases" sections for complete analysis.</p>');
+  }
+
+  // ── §7 alternate fixes ───────────────────────────────────────
+  // Only shown when the git delta area has commits filled in
+  var gitLog = (document.getElementById('git-log')||{}).value||'';
+  var commits = [];
+  var cre = /^([0-9a-f]{7,40})\s+(.+)/mg;
+  var cm;
+  while ((cm = cre.exec(gitLog)) !== null) commits.push({sha:cm[1], subject:cm[2].trim()});
+  commits = commits.slice(0,10);
+
+  if (commits.length) {
+    H.push(section(7, 'Alternate Fixes — For Each Introducing Commit', true));
+    H.push('<p style="font-size:12px;color:#57606a;margin-bottom:10px">Option A = immediate revert. Options B/C = forward fixes that preserve the commit\'s intent.</p>');
+    commits.forEach(function(c) {
+      H.push('<div style="border:1px solid #e5e7eb;border-radius:6px;margin-bottom:10px;overflow:hidden">');
+      H.push('<div style="background:#0d1117;padding:8px 12px;font-family:monospace;font-size:11.5px;color:#e6edf3">'
+        +'<span style="color:#79c0ff">'+esc(c.sha)+'</span> &mdash; '+esc(c.subject)+'</div>');
+      H.push('<div style="padding:8px 12px">');
+
+      // revert
+      H.push('<div style="border-left:3px solid #f87171;background:#fff8f8;padding:6px 10px;margin-bottom:6px;font-size:12px">'
+        +'<div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Option A — Revert (immediate)</div>'
+        +'<code style="background:#f0f3f8;border:1px solid #d8dde4;border-radius:3px;padding:2px 6px;font-size:11.5px">git revert '+esc(c.sha)+'</code>'
+        +'<div style="color:#57606a;font-size:11px;margin-top:3px">Fastest path to green CI. Removes the change entirely. Use when the feature is not yet depended upon.</div>'
+        +'</div>');
+
+      // forward fix B: infer from subject
+      var fwdB = '', fwdC = '';
+      var subj = c.subject.toLowerCase();
+      if (/intercept|0xb9af/.test(subj)) {
+        fwdB = 'Raise the kvm-unit-test timeout for the firq test cases (in s390x/firq.c or the test harness config) to accommodate the new intercept overhead. Annotate with a reference to this commit.';
+        fwdC = 'Profile the new intercept handler. If the overhead is in an unconditional slow path (lock, function call), move the decision to a lightweight fast-path check that short-circuits in the common case.';
+      } else if (/inject_exception|0x3a|memop|mem_op/.test(subj)) {
+        fwdB = 'Gate the new flag on a KVM capability advertisement so consumers only use it when the host has confirmed support. Prevents silent behaviour change on kernels that do not fully implement it.';
+        fwdC = 'If the smp_PV failure is a debug-kernel timing artefact, add a conditional test skip for +debug builds and file a tracking bug. Mitigation only — prefer Option B.';
+      } else if (/pim|pam|sysfs/.test(subj)) {
+        fwdB = 'Update the QEMU s390-ccw-virtio CPU model table and the libvirt s390x CPU map to no longer reference pim/pam sysfs entries for feature detection. Then re-land the removal.';
+        fwdC = 'Add a kernel boot parameter (e.g. s390_mm.keep_pim_pam=1) that temporarily restores the entries, giving tooling one release cycle to adapt before unconditional removal.';
+      } else if (/reipl|ccw.*device|device.*path/.test(subj)) {
+        fwdB = 'Add a fallback in chreipl/zipl: try the new sysfs path first; if absent, fall back to the old path with a deprecation warning. Allows mixed kernel+tools environments during the transition.';
+        fwdC = 'Ensure the kernel creates the new /sys/firmware/reipl/ccw/device node before the reipl service runs. Add an ordering dependency or wait loop for the channel subsystem scan to complete (especially on z17 KVM).';
+      } else {
+        fwdB = 'Identify the specific ABI or interface that changed, update the consumer (QEMU, s390-tools, or kvm-unit-tests) to match the new interface, and re-land.';
+        fwdC = 'Add a runtime capability check so the new behaviour is only activated when both the kernel and the userspace tool support it, preserving backward compatibility.';
+      }
+      H.push('<div style="border-left:3px solid #3b82d4;background:#f7f8fa;padding:6px 10px;margin-bottom:6px;font-size:12px">'
+        +'<div style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Option B — Forward fix</div>'
+        +'<div style="color:#1f2328">'+esc(fwdB)+'</div></div>');
+      H.push('<div style="border-left:3px solid #7c5cd8;background:#fdf4ff;padding:6px 10px;font-size:12px">'
+        +'<div style="font-size:11px;font-weight:700;color:#5b21b6;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Option C — Alternative / mitigation</div>'
+        +'<div style="color:#1f2328">'+esc(fwdC)+'</div></div>');
+
+      H.push('</div></div>');
+    });
+  }
+
+  H.push('</div>'); // close wrapper
+
+  // ── footer ──────────────────────────────────────────────────
+  H.push('<div style="text-align:center;font-size:11px;color:#57606a;border-top:1px solid #e5e7eb;padding-top:10px;margin-top:10px">CIIQ offline engine &middot; browser-only, no server required &middot; Made with IBM Bob</div>');
+
+  return H.join('\n');
+}
+
+// ── Print report ─────────────────────────────────────────────────
+function offlinePrintReport() {
+  var out = document.getElementById('offline-out');
+  if (!out || !out.innerHTML.trim()) { alert('No report to print — run Analyse Offline first.'); return; }
+
+  // Build a self-contained print window with the report HTML + print-optimised CSS
+  var win = window.open('', '_blank', 'width=900,height=700');
+  win.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">');
+  win.document.write('<title>CIIQ Run Report</title>');
+  win.document.write('<style>');
+  win.document.write([
+    '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:12px;',
+    '  line-height:1.6;color:#1f2328;background:#fff;padding:20px 28px 32px;max-width:none}',
+    // hide the print & minimise buttons in print view
+    'button{display:none!important}',
+    'table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0}',
+    'th{background:#f7f8fa;text-align:left;padding:4px 7px;border:1px solid #e5e7eb;',
+    '  font-weight:700;color:#57606a}',
+    'td{padding:4px 7px;border:1px solid #e5e7eb;vertical-align:top}',
+    'tr:nth-child(even) td{background:#fafafa}',
+    'code{background:#f0f3f8;border:1px solid #d8dde4;border-radius:2px;padding:0 3px;',
+    '  font-size:10.5px;font-family:monospace}',
+    'pre{background:#161b22;border-radius:4px;padding:7px 10px;font-size:10.5px;',
+    '  font-family:monospace;color:#e6edf3;overflow-x:auto;margin:4px 0;white-space:pre-wrap}',
+    // section headers
+    '[style*="border-bottom:2px solid"]{page-break-after:avoid}',
+    // keep callout blocks together
+    '[style*="background:#fffbeb"],[style*="background:#f0fdf4"],[style*="background:#fff0f0"]',
+    '  {page-break-inside:avoid}',
+    '@media print{',
+    '  body{padding:0}',
+    '  @page{margin:15mm 12mm;size:A4}',
+    '}'
+  ].join('\n'));
+  win.document.write('</style></head><body>');
+  win.document.write(out.innerHTML);
+  win.document.write('</body></html>');
+  win.document.close();
+  // slight delay so styles settle before print dialog
+  win.setTimeout(function(){ win.focus(); win.print(); }, 350);
+}
+
+// ── Minimise / expand report ──────────────────────────────────────
+function offlineToggleMinimise(btn) {
+  var out = document.getElementById('offline-out');
+  if (!out) return;
+  // The wrapper div is the second child of offline-out (after the topbar div)
+  // Find all direct children except the topbar
+  var children = out.children;
+  var isMin = btn.getAttribute('data-minimised') === '1';
+  if (isMin) {
+    // Expand
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].id !== 'offline-report-topbar') {
+        children[i].style.display = '';
+      }
+    }
+    btn.textContent = '−';
+    btn.title = 'Minimise report';
+    btn.setAttribute('data-minimised', '0');
+    // restore rounded bottom on topbar
+    var tb = document.getElementById('offline-report-topbar');
+    if (tb) tb.style.borderRadius = '8px 8px 0 0';
+  } else {
+    // Minimise
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].id !== 'offline-report-topbar') {
+        children[i].style.display = 'none';
+      }
+    }
+    btn.textContent = '+';
+    btn.title = 'Expand report';
+    btn.setAttribute('data-minimised', '1');
+    // round all corners when collapsed
+    var tb = document.getElementById('offline-report-topbar');
+    if (tb) tb.style.borderRadius = '8px';
+    out.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// ── Wire up the Analyse Offline button ──────────────────────────
+
+function analyseOffline() {
+  var text = (document.getElementById('ingest-text')||{}).value||'';
+  text = text.trim();
+  if (!text) {
+    setStatus('offline-status','err','Paste a CI mail into the Import CI Mail box first.');
+    return;
+  }
+  setStatus('offline-status','info','Parsing…');
+
+  var out = document.getElementById('offline-out');
+  if (!out) {
+    // create the output panel beneath the sidebar if it doesn't exist
+    out = document.createElement('div');
+    out.id = 'offline-out';
+    out.style.cssText = 'border-radius:0 0 8px 8px;margin-top:10px;font-size:13px;line-height:1.7';
+    // insert after the sidebar in the main layout
+    var main = document.querySelector('.main');
+    if (main) {
+      // show as a full-width panel above the run-bar in main
+      main.insertBefore(out, main.firstChild);
+    } else {
+      document.body.appendChild(out);
+    }
+  }
+
+  try {
+    var parsed = parseMail(text);
+
+    // Also populate the regular UI fields (same as /api/ingest does)
+    if (parsed.run_date) { var el=document.getElementById('run-date'); if(el) el.value=parsed.run_date; }
+    if (parsed.run_id)   { var el=document.getElementById('run-id');   if(el) el.value=parsed.run_id; }
+    if (parsed.web_url)  { var el=document.getElementById('run-url');  if(el) el.value=parsed.web_url; }
+    syncRunBar();
+
+    // Populate suite log textareas
+    Object.keys(parsed.suite_failures).forEach(function(suite) {
+      var el = document.querySelector('.log-in[data-suite="'+suite+'"]');
+      if (el) el.value = parsed.suite_failures[suite];
+    });
+    // Update suite status badges
+    Object.keys(parsed.suite_status).forEach(function(suite) {
+      var row = document.querySelector('.log-in[data-suite="'+suite+'"]');
+      if (!row) return;
+      var tr = row.closest('tr'); if (!tr) return;
+      var tds = tr.querySelectorAll('td'); if (tds.length < 3) return;
+      var isFail = parsed.suite_status[suite]==='FAIL';
+      tds[2].className = isFail ? 'st-fail' : 'st-pass';
+      tds[2].textContent = isFail ? 'FAIL' : 'PASS';
+      row.style.color = isFail ? '' : '#57606a';
+    });
+    // Kernel key → env tab
+    if (Object.keys(parsed.kernel_key).length) {
+      var lines = ['# Kernel builds — run '+(parsed.run_id||'')+' · '+(parsed.run_date||'')];
+      Object.keys(parsed.kernel_key).sort().forEach(function(k) {
+        var kk = parsed.kernel_key[k];
+        lines.push(k+': kernel-'+kk.name+' ('+kk.build+')');
+      });
+      var envEl = document.getElementById('git-env'); if(envEl) envEl.value=lines.join('\n');
+    }
+    // update fail counter
+    var failCount = Object.keys(parsed.suite_status).filter(function(s){return parsed.suite_status[s]==='FAIL';}).length;
+    var ctr = document.getElementById('rb-fail-count');
+    if (ctr && failCount) ctr.textContent = failCount+' / '+Object.keys(parsed.suite_status).length;
+    window.deltaReady = true;
+
+    out.innerHTML = renderReport(parsed, text);
+    out.scrollIntoView({ behavior:'smooth', block:'start' });
+
+    var suitesFound  = Object.keys(parsed.suite_failures).length;
+    var dumpsFound   = parsed.dumps.length;
+    var fixedFound   = parsed.fixed.length;
+    setStatus('offline-status','ok',
+      '✓ Parsed · '+failCount+' FAIL suites'
+      + (suitesFound?' · '+suitesFound+' failure sections':'')
+      + (dumpsFound?' · '+dumpsFound+' dump(s)':'')
+      + (fixedFound?' · '+fixedFound+' fixed test(s)':'')
+      + ' — also populated suite logs & status badges above');
+  } catch(e) {
+    setStatus('offline-status','err','Parse error: '+e.message);
+    if (window.console) console.error(e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('btn-offline-analyse');
+  if (btn) btn.addEventListener('click', analyseOffline);
+  var clr = document.getElementById('btn-offline-clear');
+  if (clr) clr.addEventListener('click', function() {
+    var out = document.getElementById('offline-out');
+    if (out) out.innerHTML='';
+    document.getElementById('offline-status').className='status';
+  });
+});
+
+})(); // end CIIQ offline engine
+
 </script>
 </body>
 </html>
